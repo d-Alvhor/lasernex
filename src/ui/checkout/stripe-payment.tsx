@@ -343,23 +343,36 @@ const PaymentForm = ({
 				</Alert>
 			)}
 			{readyToRender && (
-				<Button
-					type="submit"
-					className="w-full rounded-full text-lg"
-					size="lg"
-					aria-disabled={isBillingAddressPending || isLoading || isTransitioning}
-					onClick={(e) => {
-						if (isBillingAddressPending || isLoading || isTransitioning) {
-							e.preventDefault();
-						}
-					}}
-				>
-					{isBillingAddressPending || isLoading || isTransitioning ? (
-						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-					) : (
-						t("payNowButton")
-					)}
-				</Button>
+				<>
+					<p className="text-sm text-neutral-500">
+						Al pagar aceptas nuestras{" "}
+						<a href="/legal/condiciones" target="_blank" rel="noopener noreferrer" className="underline">
+							condiciones de venta
+						</a>{" "}
+						y confirmas que conoces tu{" "}
+						<a href="/legal/desistimiento" target="_blank" rel="noopener noreferrer" className="underline">
+							derecho de desistimiento
+						</a>
+						.
+					</p>
+					<Button
+						type="submit"
+						className="w-full rounded-full text-lg"
+						size="lg"
+						aria-disabled={isBillingAddressPending || isLoading || isTransitioning}
+						onClick={(e) => {
+							if (isBillingAddressPending || isLoading || isTransitioning) {
+								e.preventDefault();
+							}
+						}}
+					>
+						{isBillingAddressPending || isLoading || isTransitioning ? (
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+						) : (
+							t("payNowButton")
+						)}
+					</Button>
+				</>
 			)}
 		</form>
 	);

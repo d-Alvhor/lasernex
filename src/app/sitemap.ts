@@ -26,6 +26,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			}) satisfies Item,
 	);
 
+	const staticPages = [
+		"/sobre-nosotros",
+		"/como-se-fabrican",
+		"/legal/aviso-legal",
+		"/legal/privacidad",
+		"/legal/cookies",
+		"/legal/condiciones",
+		"/legal/desistimiento",
+	].map(
+		(path) =>
+			({
+				url: `${publicUrl}${path}`,
+				lastModified: new Date(),
+				changeFrequency: "monthly",
+				priority: 0.3,
+			}) satisfies Item,
+	);
+
 	return [
 		{
 			url: publicUrl,
@@ -35,5 +53,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 		},
 		...productUrls,
 		...categoryUrls,
+		...staticPages,
 	];
 }
