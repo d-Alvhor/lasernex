@@ -5,9 +5,6 @@ const withMDX = MDX();
 
 const nextConfig: NextConfig = {
 	reactStrictMode: true,
-	eslint: {
-		ignoreDuringBuilds: true,
-	},
 	output: process.env.DOCKER ? "standalone" : undefined,
 	logging: {
 		fetches: {
@@ -23,13 +20,13 @@ const nextConfig: NextConfig = {
 		formats: ["image/avif", "image/webp"],
 	},
 	transpilePackages: ["next-mdx-remote", "commerce-kit"],
+	reactCompiler: true, // graduó de experimental en Next 16
 	experimental: {
 		esmExternals: true,
 		scrollRestoration: true,
-		ppr: true,
+		// ppr (ahora "cacheComponents") queda desactivado: exige marcar cada
+		// boundary dinámico con Suspense; no aporta para un MVP de bajo volumen.
 		cpus: 1,
-		reactOwnerStack: true,
-		reactCompiler: true,
 		mdxRs: true,
 		inlineCss: true,
 	},

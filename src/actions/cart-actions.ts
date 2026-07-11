@@ -2,7 +2,7 @@
 
 import { clearCartCookie, getCartCookieJson, setCartCookieJson } from "@/lib/cart";
 import * as Commerce from "commerce-kit";
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 
 export async function getCartFromCookiesAction() {
 	const cartJson = await getCartCookieJson();
@@ -22,7 +22,7 @@ export async function setInitialCartCookiesAction(cartId: string, linesCount: nu
 		id: cartId,
 		linesCount,
 	});
-	revalidateTag(`cart-${cartId}`);
+	updateTag(`cart-${cartId}`);
 }
 
 export async function findOrCreateCartIdFromCookiesAction() {
@@ -36,7 +36,7 @@ export async function findOrCreateCartIdFromCookiesAction() {
 		id: newCart.id,
 		linesCount: 0,
 	});
-	revalidateTag(`cart-${newCart.id}`);
+	updateTag(`cart-${newCart.id}`);
 
 	return newCart.id;
 }
@@ -48,9 +48,9 @@ export async function clearCartCookieAction() {
 	}
 
 	await clearCartCookie();
-	revalidateTag(`cart-${cookie.id}`);
+	updateTag(`cart-${cookie.id}`);
 	// FIXME not ideal, revalidate per domain instead (multi-tenant)
-	revalidateTag(`admin-orders`);
+	updateTag(`admin-orders`);
 }
 
 export async function addToCartAction(formData: FormData) {
@@ -69,7 +69,7 @@ export async function addToCartAction(formData: FormData) {
 			linesCount: Commerce.cartCount(updatedCart.metadata),
 		});
 
-		revalidateTag(`cart-${updatedCart.id}`);
+		updateTag(`cart-${updatedCart.id}`);
 		return structuredClone(updatedCart);
 	}
 }
@@ -117,6 +117,6 @@ export async function setQuantity({
 export async function commerceGPTRevalidateAction() {
 	const cart = await getCartCookieJson();
 	if (cart) {
-		revalidateTag(`cart-${cart.id}`);
+		updateTag(`cart-${cart.id}`);
 	}
 }
