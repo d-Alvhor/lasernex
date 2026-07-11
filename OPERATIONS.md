@@ -8,6 +8,8 @@
 
 ## 1. Subir un producto nuevo
 
+> 🔴 **ANTES DE NADA — mira que estás en "Modo real".** Arriba del todo en Stripe hay un interruptor que pone **Modo de prueba** / *Test mode* (suele estar a la derecha, en naranja). Tiene que estar **APAGADO**. Si lo dejas encendido, creas los productos en un "Stripe de mentira" para pruebas y **NO aparecen en la tienda de verdad**. La web solo enseña lo que hay en **Modo real**. Si dudas: si ves colores naranjas o la palabra "prueba/test" por la pantalla, apágalo antes de seguir.
+
 1. Entra en **dashboard.stripe.com** con tu email y contraseña.
 2. En el menú de la izquierda: **Catálogo de productos** (Product catalog) → botón **+ Añadir producto**.
 3. Rellena:

@@ -51,21 +51,26 @@ Fase 0 produjo 7 documentos que **gobiernan el proyecto**. Antes de tocar códig
 
 ## Estado del proyecto
 
-(Actualizado 2026-07-11 tras 2ª sesión larga con Opus 4.8 en ultracode. Todo en `main` y desplegado.)
+(Actualizado 2026-07-11 — la tienda ya está **EN VIVO cobrando con dinero real**. Todo en `main` y desplegado.)
 
 - ✅ **FASE 0-3** completas y en `main`.
-- ✅ **DEPLOY EN VIVO**: la tienda funciona en **https://lasernex.vercel.app** (Stripe en modo TEST). Proyecto Vercel `lasernex` vinculado a GitHub → auto-deploy en cada push a `main`. Webhook de producción de Stripe creado y **probado en vivo**. Dominio `lasernex.es` comprado en **Dinahosting**, añadido y verificado en Vercel — falta solo cambiar 2 registros DNS (ver `DEPLOY.md`).
+- ✅ **DEPLOY EN VIVO**: la tienda funciona en **https://lasernex.vercel.app** (**Stripe en modo REAL/LIVE — cobra dinero de verdad**). Proyecto Vercel `lasernex` vinculado a GitHub → auto-deploy en cada push a `main`. Dominio `lasernex.es` comprado en **Dinahosting**, añadido y verificado en Vercel — falta solo cambiar el registro DNS de `www` (ver `DEPLOY.md`).
+- ✅ **PAGOS REALES ACTIVADOS** (2026-07-11): claves `pk_live`/`sk_live` en Vercel **solo en producción** (preview queda sin claves = seguro, sin cobros de prueba accidentales). Webhook LIVE `we_1Ts7lX…` → `/api/stripe-webhook` (eventos `payment_intent.succeeded`, `product.created/updated`) con su secreto en Vercel. Tarifa de envío LIVE `shr_1Ts7lM…` (Envío estándar península, 4,90 € IVA incl., 3-5 días). Verificado: la web sirve `pk_live` y lee el catálogo real (vacío). **El catálogo LIVE está vacío a propósito: Carla lo mete de cero en Modo real** (aviso en `OPERATIONS.md §1`). Falta la prueba humana: 1 compra real con tarjeta real.
 - ✅ **LICENCIA AGPL-3.0** (ADR-007, decidido). Repo **PÚBLICO** + aviso en footer = cumplimiento §13, gratis.
 - ✅ **DISEÑO "SALA BLANCA"**: front rehecho por completo (Fraunces + Hanken Grotesk, papel cálido, tema claro/oscuro, `ProductPlacard` generativo sin fotos, hero editorial, ficha técnica honesta, favicon 7L). **Esta es la base actual — no revertir a la estética shadcn azulada anterior.** El sistema de diseño vive en `globals.css` (tokens HSL) + `fonts.ts`.
 - 🟡 **FASE 4** parcial: cabeceras seguridad + accesibilidad OK. Lighthouse no corre en este entorno (Chrome crashea al iniciar Tracing — no es bug del código; usar PageSpeed Insights contra producción).
 
 ### Bloqueos reales que quedan (necesitan a Álvaro/Carla, no son técnicos)
-1. **DNS en Dinahosting** → Vercel: A raíz `82.98.135.43`→`76.76.21.21`, CNAME `www`→`cname.vercel-dns.com` (ver `DEPLOY.md`).
-2. **Domicilio fiscal**: Carla NO quiere publicar su casa. Hoy las legales lo ofrecen "a petición" en `shop.lasernex@gmail.com`. Decidir el definitivo (apartado de correos / oficina virtual / casa) antes de vender de verdad.
-3. **`RESEND_API_KEY`** real + verificar dominio en Resend (sin esto no salen los emails de marca; no rompe nada).
-4. **Claves LIVE de Stripe** + webhook live + datos fiscales en Invoicing (para vender con dinero real).
-5. **Logo real** en Stripe → Branding (para recibos/checkout de Stripe). Los logos que pasó Álvaro NO están en `public/`; el front usa wordmark CSS + `icon.svg` recreado. Si deja los ficheros reales en `public/`, se cambian por los exactos.
-6. Textos legales revisados por un asesor cuando sea posible.
+1. **Catálogo LIVE**: Carla debe crear los productos de cero **en Modo real** de Stripe (la web sale vacía hasta entonces). Guía en `OPERATIONS.md §1` con el aviso del interruptor Modo real/prueba.
+2. **Prueba humana**: 1 compra real con tarjeta real (importe pequeño) para confirmar de punta a punta que el dinero entra. No la puede hacer un modelo (no hay tarjeta real).
+3. **DNS en Dinahosting** → Vercel: apex `lasernex.es` ✅ hecho; falta CNAME `www`→`cname.vercel-dns.com` (ver `DEPLOY.md`).
+4. **Domicilio fiscal**: Carla NO quiere publicar su casa. Hoy las legales lo ofrecen "a petición" en `shop.lasernex@gmail.com`. Decidir el definitivo (apartado de correos / oficina virtual / casa).
+5. **`RESEND_API_KEY`** real + verificar dominio en Resend (sin esto no salen los emails de marca; no rompe la compra — Stripe manda su propio recibo).
+6. **Logo real** en Stripe → Branding (para recibos/checkout de Stripe). Los logos que pasó Álvaro NO están en `public/`; el front usa wordmark CSS + `icon.svg` recreado.
+7. Textos legales revisados por un asesor cuando sea posible.
+8. **Seguridad**: la `sk_live` se vio en una captura dentro del chat. Conviene **rotarla** en Stripe (Developers → API keys → Roll) por precaución; luego actualizar `STRIPE_SECRET_KEY` en Vercel y redeploy.
+
+> Datos fiscales de Invoicing en Stripe (NIF, dirección para facturas) y activación de la cuenta: **verificado en vivo** (`charges_enabled` y `payouts_enabled` = true, descriptor `LASERNEX`).
 
 Datos confirmados: titular **Carla Manso Rojas** (NIF `29517704X`), contacto **shop.lasernex@gmail.com**.
 
