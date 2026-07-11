@@ -2,26 +2,48 @@
 .worktrees/
 worktrees/
 
-# Node / Next.js
-node_modules/
-.next/
-out/
-build/
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
 dist/
 
-# Bun
+# bun
 bun.lockb
 
-# Env — nunca secretos en el repo
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# env — nunca secretos en el repo
 .env
 .env.local
-.env.*.local
+.env*.local
 
-# Sistema
-.DS_Store
-*.log
-npm-debug.log*
+# vercel
+.vercel
 
-# Editor
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+.prototools
+
+# editor
 .vscode/
 .idea/
+.zed
