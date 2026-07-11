@@ -123,9 +123,11 @@ export async function POST(request: Request) {
 
 			break;
 
-		// Auto-slug: cuando la dueña crea/edita un producto en Stripe sin poner el
-		// metadato `slug`, se lo generamos a partir del nombre. Así solo necesita
-		// rellenar Nombre + Precio + Foto. (Un producto sin slug rompería el catálogo.)
+		// Producto creado/editado/archivado en Stripe por la dueña:
+		// 1) Auto-slug si falta (así solo necesita Nombre + Precio + Foto; un
+		//    producto sin slug rompería el catálogo).
+		// 2) Refrescar SIEMPRE el catálogo (cache tag "product") para que el cambio
+		//    se vea en la web sin esperar. Cubre alta, edición y archivado.
 		case "product.created":
 		case "product.updated": {
 			const product = event.data.object;
@@ -134,11 +136,11 @@ export async function POST(request: Request) {
 					await stripe.products.update(product.id, {
 						metadata: { slug: slugify(product.name) },
 					});
-					revalidateTag("product", "max");
 				} catch (slugError) {
 					console.error("No se pudo auto-generar el slug del producto", product.id, slugError);
 				}
 			}
+			revalidateTag("product", "max");
 			break;
 		}
 
