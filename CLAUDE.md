@@ -20,6 +20,7 @@ Fase 0 produjo 7 documentos que **gobiernan el proyecto**. Antes de tocar códig
 | `LEGAL.md` | Textos legales base (GDPR/LSSI/TRLGDCU) — no lanzar sin revisión de asesor |
 | `OPERATIONS.md` | Manual de la dueña — si un cambio altera cómo opera ella, actualizar este doc EN EL MISMO PR |
 | `ROADMAP.md` | MVP 4 semanas, fase 2 y **anti-roadmap** (lo vetado) |
+| `DEPLOY.md` | Guía paso a paso para el primer deploy en Vercel (bloqueado en Fase 1 por permisos del token) |
 
 ## Reglas duras (violarlas = PR rechazado)
 
