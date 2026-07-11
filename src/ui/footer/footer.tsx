@@ -68,6 +68,17 @@ export async function Footer() {
 					<p>© {new Date().getFullYear()} Lasernex</p>
 					<p>Piezas impresas en 3D, fabricadas en España</p>
 				</div>
+				{/* Cumplimiento AGPL-3.0 §13: oferta prominente del código fuente (ADR-007) */}
+				<p className="text-xs text-neutral-400">
+					Software libre bajo{" "}
+					<YnsLink
+						className="underline underline-offset-2 hover:text-neutral-600"
+						href="https://github.com/d-Alvhor/lasernex"
+						target="_blank"
+					>
+						AGPL-3.0
+					</YnsLink>
+				</p>
 			</div>
 		</footer>
 	);

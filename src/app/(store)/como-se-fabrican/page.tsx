@@ -37,8 +37,8 @@ export default function ComoSeFabricanPage() {
 				<h2>Tiempos de fabricación</h2>
 				<p>
 					Como cada pieza se fabrica bajo demanda (no tenemos stock preimpreso a gran escala), el plazo de
-					fabricación es de <code>[X-Y]</code> días laborables, más el envío (<code>[24-72 h]</code> a
-					península). Verás el plazo estimado en la página de cada producto.
+					fabricación es de 3-7 días laborables, más el envío (24-72 h a península). Verás el plazo estimado
+					en la página de cada producto.
 				</p>
 
 				<h2>Personalización</h2>

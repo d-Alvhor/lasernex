@@ -13,8 +13,8 @@ export default function AvisoLegalPage() {
 
 			<h2>Titular del sitio</h2>
 			<p>
-				Este sitio web, lasernex.es, es titularidad de <code>[TITULAR]</code>, con NIF <code>[NIF]</code> y
-				domicilio en <code>[DOMICILIO]</code>. Contacto: <code>[EMAIL_CONTACTO]</code>.
+				Este sitio web, lasernex.es, es titularidad de Carla Manso Rojas, con NIF 29517704X y domicilio en{" "}
+				<code>[DOMICILIO]</code>. Contacto: hola@lasernex.es.
 			</p>
 
 			<h2>Objeto</h2>
@@ -23,14 +23,14 @@ export default function AvisoLegalPage() {
 			<h2>Condiciones de uso</h2>
 			<p>
 				El acceso al sitio es gratuito. El usuario se compromete a usar el sitio conforme a la ley y a estas
-				condiciones. Los contenidos del sitio (textos, imágenes, logotipo Lasernex) son propiedad de{" "}
-				<code>[TITULAR]</code> o se usan con licencia; queda prohibida su reproducción sin autorización.
+				condiciones. Los contenidos del sitio (textos, imágenes, logotipo Lasernex) son propiedad de Carla
+				Manso Rojas o se usan con licencia; queda prohibida su reproducción sin autorización.
 			</p>
 
 			<h2>Responsabilidad</h2>
 			<p>
-				<code>[TITULAR]</code> no responde de daños derivados de fuerza mayor, mal uso del sitio o
-				interrupciones técnicas ajenas (hosting, red).
+				Carla Manso Rojas no responde de daños derivados de fuerza mayor, mal uso del sitio o interrupciones
+				técnicas ajenas (hosting, red).
 			</p>
 
 			<h2>Ley aplicable</h2>

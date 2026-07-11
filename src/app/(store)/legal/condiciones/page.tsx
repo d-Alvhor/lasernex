@@ -13,8 +13,8 @@ export default function CondicionesPage() {
 
 			<ol>
 				<li>
-					<strong>Identidad del vendedor</strong>: <code>[TITULAR]</code>, NIF <code>[NIF]</code>,{" "}
-					<code>[DOMICILIO]</code>, <code>[EMAIL_CONTACTO]</code>.
+					<strong>Identidad del vendedor</strong>: Carla Manso Rojas, NIF 29517704X, <code>[DOMICILIO]</code>,
+					hola@lasernex.es.
 				</li>
 				<li>
 					<strong>Productos</strong>: piezas fabricadas por impresión 3D. Las fotos son orientativas; al ser
@@ -31,13 +31,13 @@ export default function CondicionesPage() {
 					email de confirmación con el resumen.
 				</li>
 				<li>
-					<strong>Plazos</strong>: al ser productos fabricados bajo demanda, el plazo de fabricación es de{" "}
-					<code>[X-Y]</code> días laborables más envío (<code>[24-72 h]</code> península). Envíos solo a
-					España <code>[ajustar si se amplía]</code>.
+					<strong>Plazos</strong>: al ser productos fabricados bajo demanda, el plazo de fabricación es de 3-7
+					días laborables, más el envío (24-72 h) a España peninsular. Por ahora enviamos solo a España
+					peninsular.
 				</li>
 				<li>
 					<strong>Entrega</strong>: por mensajería al domicilio indicado. Si el paquete llega dañado,
-					comunícalo en 48 horas con fotos a <code>[EMAIL_CONTACTO]</code>.
+					comunícalo en 48 horas con fotos a hola@lasernex.es.
 				</li>
 				<li>
 					<strong>Desistimiento</strong>: 14 días naturales (ver la página de{" "}
@@ -53,8 +53,7 @@ export default function CondicionesPage() {
 					con NIF, pídela y te la emitimos.
 				</li>
 				<li>
-					<strong>Atención al cliente</strong>: <code>[EMAIL_CONTACTO]</code>, respuesta en máximo{" "}
-					<code>[2]</code> días laborables.
+					<strong>Atención al cliente</strong>: hola@lasernex.es, respuesta en máximo 2 días laborables.
 				</li>
 			</ol>
 		</>
