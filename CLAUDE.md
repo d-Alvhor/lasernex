@@ -50,10 +50,20 @@ Fase 0 produjo 7 documentos que **gobiernan el proyecto**. Antes de tocar códig
 
 ## Estado del proyecto
 
-- ✅ **FASE 0** — 7 documentos + este CLAUDE.md (2026-07-11, Fable 5)
-- ⏳ **FASE 1** (rama `fase-1-setup`, worktree `.worktrees/fase-1-setup`) — Hecho y verificado en local con claves de test reales: código base traído, deps actualizadas (ver ADR-006), auth propio eliminado, producto + precio + tarifa de envío de prueba creados en Stripe test, flujo catálogo→producto→carrito→método de envío probado de principio a fin en el navegador. Pendiente: deploy en Vercel + dominio lasernex.es (falta comprar el dominio — ver `OPERATIONS.md`/decisión pendiente con Álvaro sobre dónde).
-- ⬜ FASE 2 — Marca, español, legales, "Sobre nosotros"/"Cómo se fabrican"
-- ⬜ FASE 3 — Webhook + Resend + Invoicing + "pedido enviado"
-- ⬜ FASE 4 — Auditorías, Lighthouse ≥90, paso a live, formación de la dueña
+(Actualizado 2026-07-11 por Sonnet 5, tras una sesión larga de Fases 1-4 en autónomo. `main` ya tiene todo esto mergeado y pusheado.)
+
+- ✅ **FASE 0** — 7 documentos + `CLAUDE.md` (Fable 5)
+- ✅ **FASE 1** — Código traído y actualizado (ver ADR-006), auth propio eliminado, Stripe test con producto/precio/tarifa de envío, flujo completo probado en navegador. **Único pendiente real**: deploy en Vercel (ver bloqueo abajo). Dominio lasernex.es **ya comprado por Álvaro**.
+- ✅ **FASE 2** — Marca Lasernex aplicada (wordmark tipográfico, hero oscuro), traducción es-ES 100% real (incluido checkout/envío/país, no solo placeholder), páginas legales `/legal/*` + footer, `/sobre-nosotros` y `/como-se-fabrican`. Falta: logo real (hoy vacío en Stripe → Branding) y fotos reales de producto/proceso.
+- ✅ **FASE 3** — Webhook verificado con Stripe CLI end-to-end; Resend integrado (código completo, falta `RESEND_API_KEY` real); **bug real corregido**: `receipt_email` nunca se fijaba, así que Stripe nunca hubiera mandado su recibo automático pese a prometerlo en `condiciones` — arreglado y verificado con compra de prueba real; mecanismo "pedido enviado" sin panel propio (ADR-003). Falta: Invoicing con NIF real, dominio verificado en Resend.
+- 🟡 **FASE 4** (parcial) — Cabeceras de seguridad implementadas y verificadas; pasada de accesibilidad hecha (skip link que faltaba, textos de lector de pantalla sueltos en inglés, contraste verificado con fórmula WCAG real). **Lighthouse no se pudo correr**: Chrome crashea (`Inspector.targetCrashed`) al iniciar Tracing en este entorno sandboxed — probado con 5+ combinaciones de flags, no es un bug del código. Pendiente para cuando alguien lo corra en una máquina normal o contra producción real.
+
+### Bloqueos reales (no técnicos, necesitan a Álvaro/Carla)
+1. **Deploy en Vercel**: el token que se dio (`vck_...`) es de **solo lectura** (confirmado con CLI y API REST: crear proyecto da 403 forbidden). Hace falta un token de acceso completo (vercel.com/account/tokens, scope de cuenta completo) o hacerlo directamente desde el dashboard de Vercel importando el repo `d-Alvhor/lasernex` de GitHub (más recomendable: así queda auto-deploy en cada push a `main`).
+2. **`RESEND_API_KEY` real** + dominio lasernex.es verificado en Resend (SPF/DKIM) — sin esto los emails de marca no se envían (no rompe nada, solo se loguea un aviso).
+3. **Invoicing en Stripe**: NIF/CIF y datos fiscales reales del titular.
+4. **Logo real** en Stripe → Configuración → Marca, y fotos reales de producto/proceso de fabricación.
+5. **ADR-007 (licencia AGPL/Comercial de YNS)**: decisión legal pendiente antes de lanzar en público — ver `ARCHITECTURE.md`.
+6. Textos legales (`LEGAL.md`, placeholders `[TITULAR]`/`[NIF]`/etc.) revisados por un asesor con los datos fiscales reales.
 
 *(Quien cierre una fase: actualiza este bloque y el checklist de `ROADMAP.md` en el mismo commit.)*
