@@ -14,7 +14,7 @@ export const Nav = async () => {
 					</SeoH1>
 				</YnsLink>
 
-				<div className="ml-8 flex w-auto shrink overflow-auto max-sm:order-2 max-sm:ml-0 sm:mr-auto">
+				<div className="ml-8 flex w-auto shrink-0 max-sm:order-2 max-sm:ml-0 sm:mr-auto">
 					<NavMenu />
 				</div>
 				<div className="mr-2 ml-auto sm:ml-0">

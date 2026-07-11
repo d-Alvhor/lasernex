@@ -14,9 +14,9 @@ export default function SobreNosotrosPage() {
 				<h1>Sobre Lasernex</h1>
 
 				<p>
-					Lasernex nace para poner en tus manos piezas que normalmente no encontrarías en ninguna tienda:
-					objetos diseñados y fabricados a medida, capa a capa, con impresión 3D. Sin grandes tiradas ni
-					almacenes llenos de stock — cada pieza se fabrica cuando la pides.
+					Lasernex es un catálogo de objetos de diseño propio, impresos en 3D capa a capa. La mayoría son
+					piezas de nuestro catálogo que fabricamos <strong>cuando haces tu pedido</strong>: sin grandes
+					tiradas ni almacenes llenos de stock, solo lo que de verdad se pide.
 				</p>
 
 				<h2>Por qué impresión 3D</h2>

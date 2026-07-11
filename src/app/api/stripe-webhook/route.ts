@@ -5,6 +5,20 @@ import * as Commerce from "commerce-kit";
 import { cartMetadataSchema } from "commerce-kit/internal";
 import { revalidateTag } from "next/cache";
 
+// Genera un slug url-amigable a partir del nombre del producto.
+// Sirve para que la dueña NO tenga que rellenar el metadato `slug` a mano en
+// Stripe: al crear el producto, el webhook lo pone solo (ver OPERATIONS.md).
+function slugify(text: string): string {
+	return text
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "") // quita acentos
+		.toLowerCase()
+		.trim()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.slice(0, 60);
+}
+
 export async function POST(request: Request) {
 	if (!env.STRIPE_WEBHOOK_SECRET) {
 		return new Response("STRIPE_WEBHOOK_SECRET is not configured", { status: 500 });
@@ -108,6 +122,25 @@ export async function POST(request: Request) {
 			}
 
 			break;
+
+		// Auto-slug: cuando la dueña crea/edita un producto en Stripe sin poner el
+		// metadato `slug`, se lo generamos a partir del nombre. Así solo necesita
+		// rellenar Nombre + Precio + Foto. (Un producto sin slug rompería el catálogo.)
+		case "product.created":
+		case "product.updated": {
+			const product = event.data.object;
+			if (product.active && !product.metadata?.slug && product.name) {
+				try {
+					await stripe.products.update(product.id, {
+						metadata: { slug: slugify(product.name) },
+					});
+					revalidateTag("product", "max");
+				} catch (slugError) {
+					console.error("No se pudo auto-generar el slug del producto", product.id, slugError);
+				}
+			}
+			break;
+		}
 
 		default:
 			console.log(`Unhandled event type: ${event.type}`);

@@ -214,7 +214,7 @@ export default async function SingleProductPage(props: {
 						{/* Nota de confianza con punto clay */}
 						<p className="flex items-center gap-2 font-sans text-sm text-muted-foreground">
 							<span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-clay" />
-							Fabricado a mano por Carla · 3-5 días · Envío península
+							Impreso y preparado por Carla · 3-5 días · Envío península
 						</p>
 					</div>
 				</div>

@@ -32,7 +32,7 @@
 	"Global.deliveryEstimates.week": "{count, plural, =1 {# semana} other {# semanas}}",
 	"Global.actions.shopNow": "Comprar ahora",
 	"/.hero.title": "Piezas impresas en 3D, hechas para durar",
-	"/.hero.description": "Diseños propios fabricados a medida en España. Materiales resistentes, acabado cuidado y envío a toda la península.",
+	"/.hero.description": "Un catálogo de diseños propios, impresos en 3D en España cuando haces tu pedido. Materiales resistentes, acabado cuidado y envío a toda la península.",
 	"/.hero.action": "Ver catálogo",
 	"/.hero.link": "/products",
 	"/search.notFound.title": "Sin resultados para «{query}»",
