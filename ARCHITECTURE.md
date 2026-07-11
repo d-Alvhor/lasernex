@@ -96,10 +96,12 @@ flowchart TB
 - **Por qué**: coste 0 €/mes real (una BD gestionada gratis siempre acaba teniendo límites o coste), cero mantenimiento, cero backups, cero migraciones, y una única fuente de verdad que la dueña ya usa (Dashboard de Stripe). Con <100 pedidos/mes no existe ningún requisito que Stripe no cubra.
 - **Contrapartida**: consultas complejas de catálogo (filtros avanzados, búsqueda full-text) están limitadas; con un catálogo pequeño es irrelevante. Si en Fase 2+ hiciera falta, se añade caché/índice sin cambiar la fuente de verdad.
 
-### ADR-002 — Stripe Checkout hosted (no checkout embebido ni propio)
-- **Decisión**: el pago ocurre en la página hosted de Stripe.
-- **Por qué**: PCI-DSS delegado por completo (SAQ-A), 3D Secure/SCA automático (obligatorio en la UE — PSD2), página ya traducida al español y optimizada para conversión, métodos de pago (tarjeta, Apple/Google Pay, Bizum si se activa) sin código adicional. Un checkout propio es la pieza con más riesgo legal y de seguridad de un e-commerce; aquí se elimina entera.
-- **Contrapartida**: menos control estético sobre esa página (se mitiga con logo y colores de marca en el Dashboard).
+### ADR-002 — Checkout con Stripe Elements embebido (PaymentIntent) — ⚠️ CORREGIDO en Fase 1
+- **Decisión original (Fase 0)**: se asumió Stripe Checkout hosted (redirección a `checkout.stripe.com`).
+- **Corrección (verificada en Fase 1 probando el flujo real de principio a fin)**: el código de `a98a19f` **no usa Checkout Sessions hosted**. Usa **Stripe Elements embebido** (`@stripe/react-stripe-js`, `stripe-elements-container.tsx`, `stripe-payment.tsx`) sobre un **PaymentIntent** creado y actualizado por `commerce-kit` (`cartCreate`/`updatePaymentIntent`), con un formulario propio en `/cart` para dirección y método de envío, y los campos de tarjeta de Stripe Elements montados ahí mismo (no hay redirección a un dominio de Stripe).
+- **Por qué se mantiene así (no se revierte a hosted)**: cambiar a Checkout Sessions hosted sería reescribir la capa de carrito/checkout de `commerce-kit`, un cambio grande fuera de alcance de "traer y actualizar deps". Elements sigue delegando la introducción de datos de tarjeta a iframes de Stripe (Stripe.js) — **la tarjeta nunca toca nuestro servidor ni nuestro JS**, manteniendo un alcance PCI reducido (SAQ A-EP en vez de SAQ-A) y 3D Secure/SCA gestionado por Stripe (`automatic_payment_methods`).
+- **Efecto en el resto de documentos**: `SECURITY.md` §2 sigue aplicando igual (el webhook verifica `payment_intent.succeeded`, ya lo hacía el código base). `ACCESSIBILITY.md` necesita cubrir el formulario propio de checkout (dirección + envío), no solo el carrito — se añade a la checklist de Fase 2/3. Ningún ADR de "sin BD"/"sin auth" se ve afectado.
+- **Verificado en Fase 1**: catálogo → producto → carrito → selección de método de envío (tarifa de España creada de prueba) funcionando de principio a fin en local con claves de test reales.
 
 ### ADR-003 — Checkout como invitado (sin cuentas de usuario)
 - **Decisión**: no hay registro ni login de clientes.
@@ -117,6 +119,17 @@ flowchart TB
 ### ADR-005 — Emails transaccionales con Resend (no solo los de Stripe)
 - **Decisión**: Stripe envía recibos/facturas; los emails de marca (confirmación con diseño propio, "pedido enviado") van por Resend.
 - **Por qué**: capa gratuita (3.000 emails/mes ≫ volumen esperado), plantillas React Email versionadas en el repo, dominio propio verificado (SPF/DKIM) para entregabilidad y confianza.
+
+### ADR-006 — `commerce-kit` fijado en `0.0.39` (no actualizar) ⚠️ HALLAZGO DE FASE 1
+- **Contexto (verificado 2026-07-11 inspeccionando los tarballs de npm de commerce-kit desde 0.0.39 hasta 0.53.0)**: el paquete `commerce-kit` —la capa que traduce el catálogo de Stripe a la tienda— sufrió el MISMO pivote que motivó el ADR-004. La versión `0.0.39` (la de nuestro commit base) es la última que habla directo con Stripe (`STRIPE_SECRET_KEY`, `new Stripe(...)`). A partir de `~0.10.0` el paquete empieza a depender de la plataforma SaaS de YNS (mismo patrón `YNS_API_KEY`/`yns.store`); las versiones intermedias (`0.1.0`–`0.9.x`) ya estaban en transición.
+- **Decisión**: NO actualizar `commerce-kit` más allá de `0.0.39` bajo ningún concepto, aunque `bun outdated` lo marque como muy desactualizado. Si algún día hace falta una función nueva de una versión posterior, evaluar caso a caso si esa versión concreta sigue funcionando sin `YNS_API_KEY` (repetir la inspección de tarballs) antes de tocarlo.
+- **Efecto colateral**: esto fija también `typescript` (`5.9.3`) y `@types/node` (`22.20.1`) por debajo de sus últimas versiones (`7.x`/`26.x`), ya que son `peerDependencies` declaradas por `commerce-kit@0.0.39` (`^5.5.4`, `^20||^22`). Actualizar TS/node más allá de eso rompe la instalación (`npm error ERESOLVE`).
+
+### ADR-007 — Licencia del código base: AGPL-3.0 / Comercial ⚠️ PENDIENTE DE DECISIÓN (no técnica, legal/negocio)
+- **Contexto**: `yournextstore` se distribuye con doble licencia: `LICENSE-AGPL.md` (AGPL-3.0-only) o `LICENSE-Commercial.md` (de pago, contacto `hi@yournextstore.com`). El `package.json` original declaraba `"license": "AGPL-3.0-only"`.
+- **Por qué importa**: AGPL-3.0 tiene cláusula de "copyleft de red" (§13): si se ejecuta una versión modificada del programa como servicio accesible por red (que es exactamente lo que es una tienda online), hay que ofrecer el código fuente completo (incluidas las modificaciones) a quien interactúe con el servicio. Lasernex.es sería ese servicio.
+- **No es una decisión técnica** y esta sesión (Fable 5 / Sonnet) no puede resolverla: hace falta que Álvaro (o su asesor legal) decida entre: (a) publicar el código de Lasernex como código abierto bajo AGPL-3.0, (b) contactar a `hi@yournextstore.com` para una licencia comercial, o (c) confirmar que el uso que se le da (fork privado, fuertemente modificado, no redistribuido como producto) queda fuera del supuesto que preocupa — esto último requiere lectura legal del texto AGPL-3.0 completo, no una suposición nuestra.
+- **Estado**: ⚠️ **no resuelto**. No bloquea el desarrollo (Fases 1-3), pero es un **gate obligatorio antes del lanzamiento público** (Fase 4) — se añade a la checklist de `ROADMAP.md`. Los ficheros `LICENSE-AGPL.md`/`LICENSE-Commercial.md` se mantienen intactos en el repo hasta que se resuelva.
 
 ---
 

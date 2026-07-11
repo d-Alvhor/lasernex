@@ -6,27 +6,28 @@
 
 ## 1. Cabeceras de seguridad
 
-Se configuran en `next.config.ts` (`headers()`) para TODAS las rutas. Valores de partida:
+Se configuran en `next.config.ts` (`headers()`) para TODAS las rutas. **Implementado y verificado en Fase 1** (`curl -sI` contra el build de producción local confirma las 6 cabeceras; el checkout con Stripe Elements se probó cargando sin errores de consola bajo esta CSP):
 
 ```ts
 // next.config.ts — cabeceras de seguridad globales
+// ⚠️ El checkout usa Stripe Elements EMBEBIDO, no una redirección a
+// checkout.stripe.com (ver ADR-002 en ARCHITECTURE.md — corregido en Fase 1
+// tras probar el flujo real). Por eso script-src/frame-src SÍ necesitan
+// permitir explícitamente js.stripe.com/hooks.stripe.com.
 const securityHeaders = [
   {
-    // CSP estricta: la tienda no ejecuta JS de terceros.
-    // El pago ocurre en checkout.stripe.com (redirección), NO embebido,
-    // así que no hace falta permitir js.stripe.com. Si algún día se
-    // embebe Stripe.js, añadir https://js.stripe.com a script-src y frame-src.
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'", // Next hidrata con inline; endurecer con nonces si Lighthouse lo permite
-      "style-src 'self' 'unsafe-inline'",  // Tailwind inyecta estilos inline en dev
-      "img-src 'self' https://files.stripe.com https://*.stripe.com data: blob:", // imágenes de producto viven en Stripe
+      "script-src 'self' 'unsafe-inline' https://js.stripe.com", // Next hidrata con inline + Stripe.js
+      "style-src 'self' 'unsafe-inline'",  // Tailwind/inlineCss inyectan estilos inline
+      "img-src 'self' https://files.stripe.com https://*.stripe.com https://*.blob.vercel-storage.com data: blob:",
       "font-src 'self'",
-      "connect-src 'self'",
+      "connect-src 'self' https://api.stripe.com", // Stripe.js llama directo a la API para tokenizar
+      "frame-src https://js.stripe.com https://hooks.stripe.com", // 3D Secure / desafíos de Stripe Elements
       "frame-ancestors 'none'",
       "base-uri 'self'",
-      "form-action 'self' https://checkout.stripe.com",
+      "form-action 'self'",
       "upgrade-insecure-requests",
     ].join("; "),
   },
@@ -36,11 +37,11 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },            // redundante con frame-ancestors, pero cubre navegadores viejos
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(self)" }, // payment=(self): Elements puede necesitarlo para Apple/Google Pay
 ];
 ```
 
-**Verificación (Fase 4)**: `curl -sI https://lasernex.es | grep -iE 'content-security|strict-transport|x-frame'` + [securityheaders.com](https://securityheaders.com) → objetivo nota A.
+**Verificación (Fase 4, en producción real)**: `curl -sI https://lasernex.es | grep -iE 'content-security|strict-transport|x-frame'` + [securityheaders.com](https://securityheaders.com) → objetivo nota A.
 
 ---
 

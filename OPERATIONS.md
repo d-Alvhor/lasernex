@@ -31,7 +31,17 @@ Te llegará un **email de Stripe** avisando de cada pago. Además:
 1. En **dashboard.stripe.com → Pagos** ves todos los pedidos: quién compró, qué, cuánto y su **dirección de envío**.
 2. Haz clic en el pago para ver el detalle completo (productos, dirección, email del cliente).
 3. Fabrica/prepara el paquete y envíalo por mensajería.
-4. Cuando lo envíes, dispara el **email de "pedido enviado"** al cliente: [se montará en la Fase 3 un botón/enlace sencillo — aquí irán esas instrucciones exactas]. Si tienes número de seguimiento de la mensajería, lo pegas ahí.
+4. Cuando lo envíes, dispara el **email de "pedido enviado"** al cliente pegando esta dirección en la barra de tu navegador (o guárdala como marcador/atajo):
+
+   ```
+   https://lasernex.es/api/orders/EL_ID_DEL_PAGO/ship?token=TU_SECRETO
+   ```
+
+   - **EL_ID_DEL_PAGO**: lo copias de la URL del pago en el Dashboard de Stripe (empieza por `pi_...`).
+   - **TU_SECRETO**: el código que se configuró una vez al lanzar la tienda (pregúntale a Álvaro si no lo tienes).
+   - Si tienes número de seguimiento de la mensajería, añádelo al final: `&tracking=1234567890`.
+
+   Al abrir el enlace verás un mensaje confirmando que el email se ha enviado. No hace falta contraseña ni iniciar sesión en nada — es un enlace de un solo uso por pedido.
 
 Consejo: usa la vista **Pagos** como tu lista de tareas — lo de arriba es lo más nuevo. Si un día hay mucho movimiento, apúntate en una libreta o nota del móvil cuáles ya enviaste.
 
