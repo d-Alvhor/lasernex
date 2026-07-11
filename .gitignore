@@ -1,0 +1,27 @@
+# Worktrees de trabajo (superpowers:using-git-worktrees)
+.worktrees/
+worktrees/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Bun
+bun.lockb
+
+# Env — nunca secretos en el repo
+.env
+.env.local
+.env.*.local
+
+# Sistema
+.DS_Store
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
