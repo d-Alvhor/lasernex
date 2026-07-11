@@ -63,6 +63,14 @@ export async function POST(request: Request) {
 				const order = await Commerce.orderGet(event.data.object.id);
 				const email = order?.order.latest_charge?.billing_details?.email;
 				if (order && email) {
+					// receipt_email nunca se fija durante el checkout (LinkAuthenticationElement
+					// solo guarda el email en billing_details, no en el propio PaymentIntent), así
+					// que sin esto Stripe NUNCA manda su recibo automático (LEGAL.md se lo promete
+					// al cliente). Fijarlo aquí, tras el pago, SÍ dispara el envío del recibo.
+					if (!order.order.receipt_email) {
+						await stripe.paymentIntents.update(event.data.object.id, { receipt_email: email });
+					}
+
 					const currency = order.order.currency;
 					await sendOrderConfirmationEmail(email, {
 						orderNumber: order.order.id,
