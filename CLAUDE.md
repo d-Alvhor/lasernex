@@ -51,20 +51,22 @@ Fase 0 produjo 7 documentos que **gobiernan el proyecto**. Antes de tocar códig
 
 ## Estado del proyecto
 
-(Actualizado 2026-07-11 por Sonnet 5, tras una sesión larga de Fases 1-4 en autónomo. `main` ya tiene todo esto mergeado y pusheado.)
+(Actualizado 2026-07-11 tras 2ª sesión larga con Opus 4.8 en ultracode. Todo en `main` y desplegado.)
 
-- ✅ **FASE 0** — 7 documentos + `CLAUDE.md` (Fable 5)
-- ✅ **FASE 1** — Código traído y actualizado (ver ADR-006), auth propio eliminado, Stripe test con producto/precio/tarifa de envío, flujo completo probado en navegador. **Único pendiente real**: deploy en Vercel (ver bloqueo abajo). Dominio lasernex.es **ya comprado por Álvaro**.
-- ✅ **FASE 2** — Marca Lasernex aplicada (wordmark tipográfico, hero oscuro), traducción es-ES 100% real (incluido checkout/envío/país, no solo placeholder), páginas legales `/legal/*` + footer, `/sobre-nosotros` y `/como-se-fabrican`. Falta: logo real (hoy vacío en Stripe → Branding) y fotos reales de producto/proceso.
-- ✅ **FASE 3** — Webhook verificado con Stripe CLI end-to-end; Resend integrado (código completo, falta `RESEND_API_KEY` real); **bug real corregido**: `receipt_email` nunca se fijaba, así que Stripe nunca hubiera mandado su recibo automático pese a prometerlo en `condiciones` — arreglado y verificado con compra de prueba real; mecanismo "pedido enviado" sin panel propio (ADR-003). Falta: Invoicing con NIF real, dominio verificado en Resend.
-- 🟡 **FASE 4** (parcial) — Cabeceras de seguridad implementadas y verificadas; pasada de accesibilidad hecha (skip link que faltaba, textos de lector de pantalla sueltos en inglés, contraste verificado con fórmula WCAG real). **Lighthouse no se pudo correr**: Chrome crashea (`Inspector.targetCrashed`) al iniciar Tracing en este entorno sandboxed — probado con 5+ combinaciones de flags, no es un bug del código. Pendiente para cuando alguien lo corra en una máquina normal o contra producción real.
+- ✅ **FASE 0-3** completas y en `main`.
+- ✅ **DEPLOY EN VIVO**: la tienda funciona en **https://lasernex.vercel.app** (Stripe en modo TEST). Proyecto Vercel `lasernex` vinculado a GitHub → auto-deploy en cada push a `main`. Webhook de producción de Stripe creado y **probado en vivo**. Dominio `lasernex.es` comprado en **Dinahosting**, añadido y verificado en Vercel — falta solo cambiar 2 registros DNS (ver `DEPLOY.md`).
+- ✅ **LICENCIA AGPL-3.0** (ADR-007, decidido). Repo **PÚBLICO** + aviso en footer = cumplimiento §13, gratis.
+- ✅ **DISEÑO "SALA BLANCA"**: front rehecho por completo (Fraunces + Hanken Grotesk, papel cálido, tema claro/oscuro, `ProductPlacard` generativo sin fotos, hero editorial, ficha técnica honesta, favicon 7L). **Esta es la base actual — no revertir a la estética shadcn azulada anterior.** El sistema de diseño vive en `globals.css` (tokens HSL) + `fonts.ts`.
+- 🟡 **FASE 4** parcial: cabeceras seguridad + accesibilidad OK. Lighthouse no corre en este entorno (Chrome crashea al iniciar Tracing — no es bug del código; usar PageSpeed Insights contra producción).
 
-### Bloqueos reales (no técnicos, necesitan a Álvaro/Carla)
-1. **Deploy en Vercel**: el token que se dio (`vck_...`) es de **solo lectura** (confirmado con CLI y API REST: crear proyecto da 403 forbidden). Hace falta un token de acceso completo (vercel.com/account/tokens, scope de cuenta completo) o hacerlo directamente desde el dashboard de Vercel importando el repo `d-Alvhor/lasernex` de GitHub (más recomendable: así queda auto-deploy en cada push a `main`).
-2. **`RESEND_API_KEY` real** + dominio lasernex.es verificado en Resend (SPF/DKIM) — sin esto los emails de marca no se envían (no rompe nada, solo se loguea un aviso).
-3. **Invoicing en Stripe**: NIF/CIF y datos fiscales reales del titular.
-4. **Logo real** en Stripe → Configuración → Marca, y fotos reales de producto/proceso de fabricación.
-5. **ADR-007 (licencia AGPL/Comercial de YNS)**: decisión legal pendiente antes de lanzar en público — ver `ARCHITECTURE.md`.
-6. Textos legales (`LEGAL.md`, placeholders `[TITULAR]`/`[NIF]`/etc.) revisados por un asesor con los datos fiscales reales.
+### Bloqueos reales que quedan (necesitan a Álvaro/Carla, no son técnicos)
+1. **DNS en Dinahosting** → Vercel: A raíz `82.98.135.43`→`76.76.21.21`, CNAME `www`→`cname.vercel-dns.com` (ver `DEPLOY.md`).
+2. **Domicilio fiscal**: Carla NO quiere publicar su casa. Hoy las legales lo ofrecen "a petición" en `shop.lasernex@gmail.com`. Decidir el definitivo (apartado de correos / oficina virtual / casa) antes de vender de verdad.
+3. **`RESEND_API_KEY`** real + verificar dominio en Resend (sin esto no salen los emails de marca; no rompe nada).
+4. **Claves LIVE de Stripe** + webhook live + datos fiscales en Invoicing (para vender con dinero real).
+5. **Logo real** en Stripe → Branding (para recibos/checkout de Stripe). Los logos que pasó Álvaro NO están en `public/`; el front usa wordmark CSS + `icon.svg` recreado. Si deja los ficheros reales en `public/`, se cambian por los exactos.
+6. Textos legales revisados por un asesor cuando sea posible.
+
+Datos confirmados: titular **Carla Manso Rojas** (NIF `29517704X`), contacto **shop.lasernex@gmail.com**.
 
 *(Quien cierre una fase: actualiza este bloque y el checklist de `ROADMAP.md` en el mismo commit.)*
