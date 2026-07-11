@@ -1,21 +1,22 @@
-import AccessoriesImage from "@/images/accessories.jpg";
-import ApparelImage from "@/images/apparel.jpg";
-
+// Categorías reales pendientes de que Álvaro defina el catálogo final
+// (se corresponden con metadata.category en Stripe). De momento, genéricas
+// para piezas impresas en 3D — cámbialas cuando haya catálogo real.
 export const config = {
 	categories: [
-		{ name: "Apparel", slug: "apparel", image: ApparelImage },
-		{ name: "Accessories", slug: "accessories", image: AccessoriesImage },
+		{ name: "Decoración", slug: "decoracion" },
+		{ name: "Organización", slug: "organizacion" },
 	],
 
 	social: {
-		x: "https://x.com/yourstore",
-		facebook: "https://facebook.com/yourstore",
+		// Rellenar cuando existan perfiles reales de Lasernex
+		x: "",
+		instagram: "",
 	},
 
 	contact: {
-		email: "support@yourstore.com",
-		phone: "+1 (555) 111-4567",
-		address: "123 Store Street, City, Country",
+		email: "hola@lasernex.es",
+		phone: "",
+		address: "",
 	},
 };
 

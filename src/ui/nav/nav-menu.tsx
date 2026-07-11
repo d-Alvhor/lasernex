@@ -4,17 +4,13 @@ import Link from "next/link";
 
 const links = [
 	{
-		label: "Home",
+		label: "Inicio",
 		href: "/",
 	},
 	...StoreConfig.categories.map(({ name, slug }) => ({
 		label: name,
 		href: `/category/${slug}`,
 	})),
-	{
-		label: "Digital",
-		href: "/category/digital",
-	},
 ];
 
 export const NavMenu = () => {

@@ -2,32 +2,34 @@ import { getTranslations } from "@/i18n/server";
 import StoreConfig from "@/store.config";
 import { Newsletter } from "@/ui/footer/newsletter.client";
 import { YnsLink } from "@/ui/yns-link";
-import type { SVGAttributes } from "react";
+
+const legalLinks = [
+	{ label: "Aviso legal", href: "/legal/aviso-legal" },
+	{ label: "Privacidad", href: "/legal/privacidad" },
+	{ label: "Cookies", href: "/legal/cookies" },
+	{ label: "Condiciones de venta", href: "/legal/condiciones" },
+	{ label: "Desistimiento", href: "/legal/desistimiento" },
+];
 
 const sections = [
 	{
-		header: "Products",
+		header: "Productos",
 		links: StoreConfig.categories.map(({ name, slug }) => ({
 			label: name,
 			href: `/category/${slug}`,
 		})),
 	},
 	{
-		header: "Support",
+		header: "Sobre Lasernex",
 		links: [
-			{
-				label: "Features",
-				href: "https://yournextstore.com/#features",
-			},
-			{
-				label: "Pricing",
-				href: "https://yournextstore.com/#pricing",
-			},
-			{
-				label: "Contact Us",
-				href: "mailto:hi@yournextstore.com",
-			},
+			{ label: "Sobre nosotros", href: "/sobre-nosotros" },
+			{ label: "Cómo se fabrican", href: "/como-se-fabrican" },
+			{ label: "Contacto", href: `mailto:${StoreConfig.contact.email}` },
 		],
+	},
+	{
+		header: "Legal",
+		links: legalLinks,
 	},
 ];
 
@@ -44,7 +46,7 @@ export async function Footer() {
 					</div>
 				</div>
 
-				<nav className="grid grid-cols-2 gap-16">
+				<nav className="grid grid-cols-2 gap-16 sm:grid-cols-3">
 					{sections.map((section) => (
 						<section key={section.header}>
 							<h3 className="mb-2 font-semibold">{section.header}</h3>
@@ -63,37 +65,10 @@ export async function Footer() {
 			</div>
 			<div className="container mt-8 flex max-w-7xl flex-col items-center justify-between gap-4 text-sm text-neutral-500 md:flex-row">
 				<div>
-					<p>© 2024 Your Next Store</p>
-					<p>Delightful commerce for everyone</p>
-				</div>
-				<div className="flex items-center gap-4">
-					<YnsLink
-						className="inline-flex items-center gap-1 transition-colors hover:text-neutral-700"
-						href="https://x.com/zaiste"
-					>
-						<TwitterIcon className="h-4 w-4" /> @zaiste
-						<span className="sr-only">Twitter</span>
-					</YnsLink>
-					<YnsLink
-						className="inline-flex items-center gap-1 transition-colors hover:text-neutral-700"
-						href="https://x.com/typeofweb"
-					>
-						<TwitterIcon className="h-4 w-4" /> @typeofweb
-						<span className="sr-only">Twitter</span>
-					</YnsLink>
+					<p>© {new Date().getFullYear()} Lasernex</p>
+					<p>Piezas impresas en 3D, fabricadas en España</p>
 				</div>
 			</div>
 		</footer>
-	);
-}
-
-function TwitterIcon(props: SVGAttributes<SVGSVGElement>) {
-	return (
-		<svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 596 596" fill="none">
-			<path
-				fill="#fff"
-				d="m1 19 230 307L0 577h52l203-219 164 219h177L353 252 568 19h-52L329 221 179 19H1Zm77 38h82l359 481h-81L78 57Z"
-			/>
-		</svg>
 	);
 }

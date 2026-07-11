@@ -1,11 +1,8 @@
 import { publicUrl } from "@/env.mjs";
 import { getTranslations } from "@/i18n/server";
-import StoreConfig from "@/store.config";
-import { CategoryBox } from "@/ui/category-box";
 import { ProductList } from "@/ui/products/product-list";
 import { YnsLink } from "@/ui/yns-link";
 import * as Commerce from "commerce-kit";
-import Image from "next/image";
 import type { Metadata } from "next/types";
 
 export const metadata = {
@@ -18,43 +15,24 @@ export default async function Home() {
 
 	return (
 		<main>
-			<section className="rounded bg-neutral-100 py-8 sm:py-12">
-				<div className="mx-auto grid grid-cols-1 items-center justify-items-center gap-8 px-8 sm:px-16 md:grid-cols-2">
-					<div className="max-w-md space-y-4">
-						<h2 className="text-balance text-3xl font-bold tracking-tight md:text-4xl">{t("hero.title")}</h2>
-						<p className="text-pretty text-neutral-600">{t("hero.description")}</p>
-						<YnsLink
-							className="inline-flex h-10 items-center justify-center rounded-full bg-neutral-900 px-6 font-medium text-neutral-50 transition-colors hover:bg-neutral-900/90 focus:outline-hidden focus:ring-1 focus:ring-neutral-950"
-							href={t("hero.link")}
-						>
-							{t("hero.action")}
-						</YnsLink>
-					</div>
-					<Image
-						alt="Cup of Coffee"
-						loading="eager"
-						priority={true}
-						className="rounded"
-						height={450}
-						width={450}
-						src="https://files.stripe.com/links/MDB8YWNjdF8xT3BaeG5GSmNWbVh6bURsfGZsX3Rlc3RfaDVvWXowdU9ZbWlobUIyaHpNc1hCeDM200NBzvUjqP"
-						style={{
-							objectFit: "cover",
-						}}
-						sizes="(max-width: 640px) 70vw, 450px"
-					/>
+			{/* Hero tipográfico: sin foto de producto hasta que haya
+			    fotografía real de catálogo (ver ROADMAP.md Fase 2) */}
+			<section className="rounded bg-neutral-950 py-16 sm:py-24">
+				<div className="mx-auto max-w-2xl space-y-4 px-8 text-center sm:px-16">
+					<h2 className="text-balance text-3xl font-bold tracking-tight text-white md:text-5xl">
+						{t("hero.title")}
+					</h2>
+					<p className="text-pretty text-neutral-400">{t("hero.description")}</p>
+					<YnsLink
+						className="inline-flex h-10 items-center justify-center rounded-full bg-white px-6 font-medium text-neutral-900 transition-colors hover:bg-neutral-200 focus:outline-hidden focus:ring-1 focus:ring-neutral-50"
+						href={t("hero.link")}
+					>
+						{t("hero.action")}
+					</YnsLink>
 				</div>
 			</section>
 
 			<ProductList products={products} />
-
-			<section className="w-full py-8">
-				<div className="grid gap-8 lg:grid-cols-2">
-					{StoreConfig.categories.map(({ slug, image: src }) => (
-						<CategoryBox key={slug} categorySlug={slug} src={src} />
-					))}
-				</div>
-			</section>
 		</main>
 	);
 }
