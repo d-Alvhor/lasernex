@@ -1,0 +1,12 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Lasernex">
+  <rect width="100" height="100" rx="22" fill="#211e1b"/>
+  <!-- Monograma 7L: 7 (barra superior + astil) + L (vertical + pie), en color papel -->
+  <g fill="#faf7f2">
+    <!-- 7 -->
+    <rect x="22" y="26" width="30" height="10.5"/>
+    <rect x="41.5" y="26" width="10.5" height="46"/>
+    <!-- L -->
+    <rect x="60" y="26" width="10.5" height="46"/>
+    <rect x="60" y="61.5" width="24" height="10.5"/>
+  </g>
+</svg>

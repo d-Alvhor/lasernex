@@ -13,8 +13,8 @@ export default function CondicionesPage() {
 
 			<ol>
 				<li>
-					<strong>Identidad del vendedor</strong>: Carla Manso Rojas, NIF 29517704X, <code>[DOMICILIO]</code>,
-					hola@lasernex.es.
+					<strong>Identidad del vendedor</strong>: Carla Manso Rojas, NIF 29517704X. Contacto:
+					shop.lasernex@gmail.com (domicilio a efectos legales disponible a petición).
 				</li>
 				<li>
 					<strong>Productos</strong>: piezas fabricadas por impresión 3D. Las fotos son orientativas; al ser
@@ -37,7 +37,7 @@ export default function CondicionesPage() {
 				</li>
 				<li>
 					<strong>Entrega</strong>: por mensajería al domicilio indicado. Si el paquete llega dañado,
-					comunícalo en 48 horas con fotos a hola@lasernex.es.
+					comunícalo en 48 horas con fotos a shop.lasernex@gmail.com.
 				</li>
 				<li>
 					<strong>Desistimiento</strong>: 14 días naturales (ver la página de{" "}
@@ -53,7 +53,8 @@ export default function CondicionesPage() {
 					con NIF, pídela y te la emitimos.
 				</li>
 				<li>
-					<strong>Atención al cliente</strong>: hola@lasernex.es, respuesta en máximo 2 días laborables.
+					<strong>Atención al cliente</strong>: shop.lasernex@gmail.com, respuesta en máximo 2 días
+					laborables.
 				</li>
 			</ol>
 		</>

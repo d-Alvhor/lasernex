@@ -13,8 +13,9 @@ export default function AvisoLegalPage() {
 
 			<h2>Titular del sitio</h2>
 			<p>
-				Este sitio web, lasernex.es, es titularidad de Carla Manso Rojas, con NIF 29517704X y domicilio en{" "}
-				<code>[DOMICILIO]</code>. Contacto: hola@lasernex.es.
+				Este sitio web, lasernex.es, es titularidad de Carla Manso Rojas, con NIF 29517704X. El domicilio a
+				efectos legales está disponible a petición escribiendo a shop.lasernex@gmail.com, correo de contacto
+				directo con la titular.
 			</p>
 
 			<h2>Objeto</h2>

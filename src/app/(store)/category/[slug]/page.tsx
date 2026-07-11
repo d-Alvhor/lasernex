@@ -44,7 +44,7 @@ export default async function CategoryPage(props: {
 
 	return (
 		<main className="pb-8">
-			<h1 className="text-3xl font-bold leading-none tracking-tight text-foreground">
+			<h1 className="font-serif text-3xl font-normal leading-tight text-foreground my-6">
 				{deslugify(params.slug)}
 				<div className="text-lg font-semibold text-muted-foreground">{t("title")}</div>
 			</h1>

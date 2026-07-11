@@ -1,8 +1,10 @@
 import "@/app/globals.css";
+import { fraunces, hanken } from "@/app/fonts";
 import { Toaster } from "@/components/ui/sonner";
 import { env, publicUrl } from "@/env.mjs";
 import { IntlClientProvider } from "@/i18n/client";
 import { getLocale, getMessages, getTranslations } from "@/i18n/server";
+import { ThemeProvider } from "@/ui/theme-provider";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
@@ -22,14 +24,20 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 	const messages = await getMessages();
 
 	return (
-		<html lang={locale} className="h-full antialiased">
-			<body className="flex min-h-full flex-col">
-				<IntlClientProvider messages={messages} locale={locale}>
-					<div className="flex min-h-full flex-1 flex-col bg-white" vaul-drawer-wrapper="">
-						{children}
-					</div>
-					<Toaster position="top-center" offset={10} />
-				</IntlClientProvider>
+		<html
+			lang={locale}
+			className={`h-full antialiased ${fraunces.variable} ${hanken.variable}`}
+			suppressHydrationWarning
+		>
+			<body className="flex min-h-full flex-col bg-background font-sans text-foreground">
+				<ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+					<IntlClientProvider messages={messages} locale={locale}>
+						<div className="flex min-h-full flex-1 flex-col bg-background" vaul-drawer-wrapper="">
+							{children}
+						</div>
+						<Toaster position="top-center" offset={10} />
+					</IntlClientProvider>
+				</ThemeProvider>
 				{env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
 					<Script
 						async

@@ -14,7 +14,7 @@ export const config = {
 	},
 
 	contact: {
-		email: "hola@lasernex.es",
+		email: "shop.lasernex@gmail.com",
 		phone: "",
 		address: "",
 	},

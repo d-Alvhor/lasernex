@@ -1,4 +1,3 @@
-// import { ProductModel3D } from "@/app/(store)/product/[slug]/product-model3d";
 import { ProductImageModal } from "@/app/(store)/product/[slug]/product-image-modal";
 import {
 	Breadcrumb,
@@ -10,17 +9,15 @@ import {
 } from "@/components/ui/breadcrumb";
 import { publicUrl } from "@/env.mjs";
 import { getLocale, getTranslations } from "@/i18n/server";
-import { getRecommendedProducts } from "@/lib/search/trieve";
 import { cn, deslugify, formatMoney, formatProductName } from "@/lib/utils";
-import type { TrieveProductMetadata } from "@/scripts/upload-trieve";
 import { AddToCartButton } from "@/ui/add-to-cart-button";
 import { JsonLd, mappedProductToJsonLd } from "@/ui/json-ld";
 import { Markdown } from "@/ui/markdown";
 import { MainProductImage } from "@/ui/products/main-product-image";
+import { ProductPlacard } from "@/ui/products/product-placard";
 import { StickyBottom } from "@/ui/sticky-bottom";
 import { YnsLink } from "@/ui/yns-link";
 import * as Commerce from "commerce-kit";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next/types";
 import { Suspense } from "react";
@@ -54,6 +51,14 @@ export const generateMetadata = async (props: {
 	} satisfies Metadata;
 };
 
+function extractMeasure(name: string): string | null {
+	const m = name.match(/(\d+(?:[.,]\d+)?)\s?(cm|mm)\b/i);
+	const num = m?.[1];
+	const unit = m?.[2];
+	if (!num || !unit) return null;
+	return `${num.replace(".", ",")} ${unit.toLowerCase()}`;
+}
+
 export default async function SingleProductPage(props: {
 	params: Promise<{ slug: string }>;
 	searchParams: Promise<{ variant?: string; image?: string }>;
@@ -74,13 +79,29 @@ export default async function SingleProductPage(props: {
 
 	const category = product.metadata.category;
 	const images = product.images;
+	const measure = extractMeasure(product.name);
+	const priceFormatted = product.default_price.unit_amount
+		? formatMoney({
+				amount: product.default_price.unit_amount,
+				currency: product.default_price.currency,
+				locale,
+			})
+		: null;
+
+	const ficha: { label: string; value: string }[] = [
+		{ label: "Fabricación", value: "Impresión 3D (FDM), bajo demanda" },
+		{ label: "Material", value: "PLA / PETG (según pieza)" },
+		{ label: "Acabado", value: "Mate, con finas líneas de capa" },
+		...(measure ? [{ label: "Medidas", value: measure }] : []),
+		...(category ? [{ label: "Categoría", value: deslugify(category) }] : []),
+	];
 
 	return (
-		<article className="pb-12">
+		<article className="py-8">
 			<Breadcrumb>
-				<BreadcrumbList>
+				<BreadcrumbList className="font-sans text-[11px] uppercase tracking-[0.14em]">
 					<BreadcrumbItem>
-						<BreadcrumbLink asChild className="inline-flex min-h-12 min-w-12 items-center justify-center">
+						<BreadcrumbLink asChild>
 							<YnsLink href="/products">{t("allProducts")}</YnsLink>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
@@ -88,7 +109,7 @@ export default async function SingleProductPage(props: {
 						<>
 							<BreadcrumbSeparator />
 							<BreadcrumbItem>
-								<BreadcrumbLink className="inline-flex min-h-12 min-w-12 items-center justify-center" asChild>
+								<BreadcrumbLink asChild>
 									<YnsLink href={`/category/${category}`}>{deslugify(category)}</YnsLink>
 								</BreadcrumbLink>
 							</BreadcrumbItem>
@@ -98,91 +119,56 @@ export default async function SingleProductPage(props: {
 					<BreadcrumbItem>
 						<BreadcrumbPage>{product.name}</BreadcrumbPage>
 					</BreadcrumbItem>
-					{selectedVariant && (
-						<>
-							<BreadcrumbSeparator />
-							<BreadcrumbItem>
-								<BreadcrumbPage>{deslugify(selectedVariant)}</BreadcrumbPage>
-							</BreadcrumbItem>
-						</>
-					)}
 				</BreadcrumbList>
 			</Breadcrumb>
 
 			<StickyBottom product={product} locale={locale}>
-				<div className="mt-4 grid gap-4 lg:grid-cols-12">
-					<div className="lg:col-span-5 lg:col-start-8">
-						<h1 className="text-3xl font-bold leading-none tracking-tight text-foreground">{product.name}</h1>
-						{product.default_price.unit_amount && (
-							<p className="mt-2 text-2xl font-medium leading-none tracking-tight text-foreground/70">
-								{formatMoney({
-									amount: product.default_price.unit_amount,
-									currency: product.default_price.currency,
-									locale,
-								})}
-							</p>
-						)}
-						<div className="mt-2">{product.metadata.stock <= 0 && <div>Out of stock</div>}</div>
-					</div>
-
-					<div className="lg:col-span-7 lg:row-span-3 lg:row-start-1">
+				<div className="mt-6 grid gap-10 lg:grid-cols-[1.1fr_1fr]">
+					{/* IZQUIERDA — visual: fotos si existen, si no la placa generativa XL */}
+					<div className="lg:sticky lg:top-24 lg:self-start">
 						<h2 className="sr-only">{t("imagesTitle")}</h2>
-
-						<div className="grid gap-4 lg:grid-cols-3 [&>*:first-child]:col-span-3">
-							{/* {product.metadata.preview && (
-								<ProductModel3D model3d={product.metadata.preview} imageSrc={product.images[0]} />
-							)} */}
-							{images.map((image, idx) => {
-								const params = new URLSearchParams({
-									image: idx.toString(),
-								});
-								if (searchParams.variant) {
-									params.set("variant", searchParams.variant);
-								}
-								return (
-									<YnsLink key={idx} href={`?${params}`} scroll={false}>
-										{idx === 0 && !product.metadata.preview ? (
-											<MainProductImage
-												key={image}
-												className="w-full rounded-lg bg-neutral-100 object-cover object-center transition-opacity"
-												src={image}
-												loading="eager"
-												priority
-												alt=""
-											/>
-										) : (
-											<Image
-												key={image}
-												className="w-full rounded-lg bg-neutral-100 object-cover object-center transition-opacity"
-												src={image}
-												width={700 / 3}
-												height={700 / 3}
-												sizes="(max-width: 1024x) 33vw, (max-width: 1280px) 20vw, 225px"
-												loading="eager"
-												priority
-												alt=""
-											/>
-										)}
-									</YnsLink>
-								);
-							})}
-						</div>
+						{images.length > 0 ? (
+							<MainProductImage
+								className="w-full bg-muted object-cover object-center"
+								src={images[0] as string}
+								loading="eager"
+								priority
+								alt={product.name}
+							/>
+						) : (
+							<ProductPlacard product={product} ratio="aspect-[4/5]" variant="feature" />
+						)}
 					</div>
 
-					<div className="grid gap-8 lg:col-span-5">
-						<section>
-							<h2 className="sr-only">{t("descriptionTitle")}</h2>
-							<div className="prose text-secondary-foreground">
-								<Markdown source={product.description || ""} />
-							</div>
-						</section>
+					{/* DERECHA — ficha */}
+					<div className="flex flex-col gap-8 lg:pl-[3vw]">
+						<div>
+							<h1 className="font-serif text-[clamp(2rem,4vw,3.25rem)] font-normal leading-[1.05] text-foreground">
+								{product.name}
+							</h1>
+							{priceFormatted && (
+								<p className="mt-3 font-serif text-2xl tabular-nums text-foreground/80">{priceFormatted}</p>
+							)}
+						</div>
+
+						{product.description && (
+							<section>
+								<h2 className="sr-only">{t("descriptionTitle")}</h2>
+								<div className="prose prose-neutral max-w-[60ch] font-sans text-muted-foreground">
+									<Markdown source={product.description} />
+								</div>
+							</section>
+						)}
 
 						{variants.length > 1 && (
 							<div className="grid gap-2">
-								<p className="text-base font-medium" id="variant-label">
+								<p
+									className="font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"
+									id="variant-label"
+								>
 									{t("variantTitle")}
 								</p>
-								<ul role="list" className="grid grid-cols-4 gap-2" aria-labelledby="variant-label">
+								<ul role="list" className="flex flex-wrap gap-2" aria-labelledby="variant-label">
 									{variants.map((variant) => {
 										const isSelected = selectedVariant === variant.metadata.variant;
 										return (
@@ -193,8 +179,8 @@ export default async function SingleProductPage(props: {
 														prefetch={true}
 														href={`/product/${variant.metadata.slug}?variant=${variant.metadata.variant}`}
 														className={cn(
-															"flex cursor-pointer items-center justify-center gap-2 rounded-md border p-2 transition-colors hover:bg-neutral-100",
-															isSelected && "border-black bg-neutral-50 font-medium",
+															"flex min-h-11 cursor-pointer items-center justify-center rounded border border-border px-4 font-sans text-sm transition-colors hover:border-foreground/50",
+															isSelected && "border-foreground bg-secondary font-medium",
 														)}
 														aria-selected={isSelected}
 													>
@@ -208,14 +194,31 @@ export default async function SingleProductPage(props: {
 							</div>
 						)}
 
+						{/* Ficha técnica — el héroe honesto que sustituye a la foto */}
+						<dl className="border-t border-border">
+							{ficha.map((row) => (
+								<div key={row.label} className="flex justify-between gap-4 border-b border-border py-3">
+									<dt className="font-sans text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+										{row.label}
+									</dt>
+									<dd className="text-right font-sans text-sm text-foreground">{row.value}</dd>
+								</div>
+							))}
+						</dl>
+
+						{product.metadata.stock <= 0 && (
+							<p className="font-sans text-sm text-destructive">Agotado temporalmente</p>
+						)}
 						<AddToCartButton productId={product.id} disabled={product.metadata.stock <= 0} />
+
+						{/* Nota de confianza con punto clay */}
+						<p className="flex items-center gap-2 font-sans text-sm text-muted-foreground">
+							<span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-clay" />
+							Fabricado a mano por Carla · 3-5 días · Envío península
+						</p>
 					</div>
 				</div>
 			</StickyBottom>
-
-			<Suspense>
-				<SimilarProducts id={product.id} />
-			</Suspense>
 
 			<Suspense>
 				<ProductImageModal images={images} />
@@ -223,59 +226,5 @@ export default async function SingleProductPage(props: {
 
 			<JsonLd jsonLd={mappedProductToJsonLd(product)} />
 		</article>
-	);
-}
-
-async function SimilarProducts({ id }: { id: string }) {
-	const products = await getRecommendedProducts({ productId: id, limit: 4 });
-
-	if (!products) {
-		return null;
-	}
-
-	return (
-		<section className="py-12">
-			<div className="mb-8">
-				<h2 className="text-2xl font-bold tracking-tight">You May Also Like</h2>
-			</div>
-			<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-				{products.map((product) => {
-					const trieveMetadata = product.metadata as TrieveProductMetadata;
-					return (
-						<div key={product.tracking_id} className="bg-card rounded overflow-hidden shadow-sm group">
-							{trieveMetadata.image_url && (
-								<YnsLink href={`${publicUrl}${product.link}`} className="block" prefetch={false}>
-									<Image
-										className={
-											"w-full rounded-lg bg-neutral-100 object-cover object-center group-hover:opacity-80 transition-opacity"
-										}
-										src={trieveMetadata.image_url}
-										width={300}
-										height={300}
-										sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 300px"
-										alt=""
-									/>
-								</YnsLink>
-							)}
-							<div className="p-4">
-								<h3 className="text-lg font-semibold mb-2">
-									<YnsLink href={product.link || "#"} className="hover:text-primary" prefetch={false}>
-										{trieveMetadata.name}
-									</YnsLink>
-								</h3>
-								<div className="flex items-center justify-between">
-									<span>
-										{formatMoney({
-											amount: trieveMetadata.amount,
-											currency: trieveMetadata.currency,
-										})}
-									</span>
-								</div>
-							</div>
-						</div>
-					);
-				})}
-			</div>
-		</section>
 	);
 }

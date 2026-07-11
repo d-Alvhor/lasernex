@@ -18,10 +18,10 @@ export default function DesistimientoPage() {
 
 			<h2>Cómo ejercerlo</h2>
 			<p>
-				Envía un email a hola@lasernex.es indicando tu número de pedido y tu decisión de desistir (puedes usar
-				el formulario de más abajo). Devuelve el producto en su estado original a{" "}
-				<code>[DOMICILIO/DIRECCIÓN DE DEVOLUCIONES]</code> en los 14 días siguientes a tu comunicación. Los
-				gastos de devolución corren a tu cargo.
+				Envía un email a shop.lasernex@gmail.com indicando tu número de pedido y tu decisión de desistir
+				(puedes usar el formulario de más abajo). Te indicaremos por email la dirección de devolución y, en
+				los 14 días siguientes a tu comunicación, devuelve el producto en su estado original. Los gastos de
+				devolución corren a tu cargo.
 			</p>
 
 			<h2>Reembolso</h2>
@@ -37,7 +37,7 @@ export default function DesistimientoPage() {
 			<p>Copia y pega este texto en tu email:</p>
 			<blockquote>
 				<p>
-					A la atención de Carla Manso Rojas, hola@lasernex.es:
+					A la atención de Carla Manso Rojas, shop.lasernex@gmail.com:
 					<br />
 					Por la presente comunico que desisto de mi contrato de venta del siguiente producto:{" "}
 					<code>[nombre]</code>, pedido nº <code>[…]</code>, recibido el <code>[fecha]</code>.
