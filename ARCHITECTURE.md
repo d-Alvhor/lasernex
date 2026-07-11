@@ -106,13 +106,13 @@ flowchart TB
 - **Por qué**: para <100 pedidos/mes las cuentas no aportan valor y sí coste: gestión de contraseñas, recuperación, más superficie GDPR (derecho de acceso/supresión sobre cuentas), más fricción de compra. El cliente recibe todo por email; el historial vive en Stripe.
 - **Contrapartida**: sin área "mis pedidos". Si algún día se necesita, Stripe soporta customer portal / links de recibo sin construir auth propia.
 
-### ADR-004 — Base de partida: fork de YNS "pure-Stripe" ⚠️ PENDIENTE DE DECISIÓN
+### ADR-004 — Base de partida: fork de YNS "pure-Stripe" ✅ DECIDIDO (opción A, 2026-07-11)
 - **Contexto (verificado el 2026-07-11 contra el repo real)**: `yournextstore/yournextstore` **pivotó a finales de 2025**. El `main` actual (Next 16 canary, Bun, commerce-kit 0.53) **ya no usa Stripe como catálogo**: requiere `YNS_API_KEY` y los productos se gestionan en la plataforma SaaS `yns.store` (su admin propio, con auth y editor). Eso rompe tres requisitos del proyecto: dueña gestionando desde el **Dashboard de Stripe**, **0 €/mes** y sin dependencia de terceros adicionales.
 - **Opciones**:
   - **A (recomendada)**: partir del último commit "pure-Stripe" (`a98a19f`, ene-2025: Next 15, `stripe@17`, `STRIPE_SECRET_KEY`, catálogo directo de Stripe) y actualizar nosotros a Next 16 estable + deps al día. Se mantiene el stack cerrado tal cual.
   - **B**: usar el `main` actual y aceptar la plataforma YNS (contradice el stack cerrado; pricing/lock-in fuera de nuestro control).
   - **C**: usar el `main` actual solo como referencia de UI y reescribir la capa de datos contra Stripe (más trabajo que A, beneficio dudoso).
-- **Estado**: se ejecutará la opción que confirme Álvaro al cierre de la Fase 0.
+- **Estado**: **Álvaro confirmó la opción A** (2026-07-11). En Fase 1: traer el código de `a98a19f` a este repo privado (un fork de GitHub no puede ser privado) y actualizar a Next 16 estable + dependencias al día.
 
 ### ADR-005 — Emails transaccionales con Resend (no solo los de Stripe)
 - **Decisión**: Stripe envía recibos/facturas; los emails de marca (confirmación con diseño propio, "pedido enviado") van por Resend.

@@ -1,0 +1,177 @@
+# SECURITY.md — Lasernex
+
+> Principio: la superficie de ataque es mínima por diseño (sin BD, sin auth, sin datos de tarjeta en nuestro dominio). Este documento cubre lo que SÍ es nuestro: cabeceras, webhook, secretos y rutas API.
+
+---
+
+## 1. Cabeceras de seguridad
+
+Se configuran en `next.config.ts` (`headers()`) para TODAS las rutas. Valores de partida:
+
+```ts
+// next.config.ts — cabeceras de seguridad globales
+const securityHeaders = [
+  {
+    // CSP estricta: la tienda no ejecuta JS de terceros.
+    // El pago ocurre en checkout.stripe.com (redirección), NO embebido,
+    // así que no hace falta permitir js.stripe.com. Si algún día se
+    // embebe Stripe.js, añadir https://js.stripe.com a script-src y frame-src.
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'", // Next hidrata con inline; endurecer con nonces si Lighthouse lo permite
+      "style-src 'self' 'unsafe-inline'",  // Tailwind inyecta estilos inline en dev
+      "img-src 'self' https://files.stripe.com https://*.stripe.com data: blob:", // imágenes de producto viven en Stripe
+      "font-src 'self'",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self' https://checkout.stripe.com",
+      "upgrade-insecure-requests",
+    ].join("; "),
+  },
+  // HSTS: fuerza HTTPS 2 años, incluye subdominios. Vercel ya sirve HTTPS;
+  // esto evita el primer request en claro. Añadir a preload list tras Fase 4.
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  { key: "X-Frame-Options", value: "DENY" },            // redundante con frame-ancestors, pero cubre navegadores viejos
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+];
+```
+
+**Verificación (Fase 4)**: `curl -sI https://lasernex.es | grep -iE 'content-security|strict-transport|x-frame'` + [securityheaders.com](https://securityheaders.com) → objetivo nota A.
+
+---
+
+## 2. Webhook de Stripe: verificación de firma (obligatoria)
+
+El webhook es la única ruta que dispara efectos (email de confirmación). **Nunca** se procesa un evento sin verificar la firma. Patrón para App Router:
+
+```ts
+// app/api/stripe-webhook/route.ts
+import Stripe from "stripe";
+import { headers } from "next/headers";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+export async function POST(req: Request) {
+  // 1. Cuerpo CRUDO: la firma se calcula sobre los bytes exactos.
+  //    No usar req.json() antes de verificar.
+  const payload = await req.text();
+  const signature = (await headers()).get("stripe-signature");
+
+  if (!signature) return new Response("Falta firma", { status: 400 });
+
+  let event: Stripe.Event;
+  try {
+    // 2. constructEvent verifica firma HMAC y tolerancia de timestamp (5 min)
+    //    → protege contra manipulación y contra replay attacks.
+    event = stripe.webhooks.constructEvent(
+      payload,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET!,
+    );
+  } catch {
+    return new Response("Firma inválida", { status: 400 });
+  }
+
+  // 3. Idempotencia: Stripe puede reenviar eventos. El envío de email debe
+  //    tolerar duplicados (Resend con header Idempotency-Key = event.id).
+  switch (event.type) {
+    case "checkout.session.completed":
+      // enviar email de confirmación vía Resend (Fase 3)
+      break;
+    default:
+      // Evento no manejado: 200 para que Stripe no reintente.
+      break;
+  }
+  return new Response("ok", { status: 200 });
+}
+```
+
+Reglas:
+- Responder **rápido** (<10 s) y en 2xx; el trabajo pesado, tras responder o tolerando reintentos.
+- En local se prueba con `stripe listen --forward-to localhost:3000/api/stripe-webhook` (el CLI da su propio `whsec_…`).
+- Un `STRIPE_WEBHOOK_SECRET` **distinto por entorno** (el de producción se genera al crear el endpoint en el Dashboard).
+
+---
+
+## 3. Secretos: qué claves usa cada entorno
+
+| Variable | Test (local + preview) | Producción | Expuesta al cliente |
+|---|---|---|---|
+| `STRIPE_SECRET_KEY` | `sk_test_…` | `sk_live_…` | ❌ nunca |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_test_…` | `pk_live_…` | ✅ (es pública por diseño) |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_…` (CLI / endpoint test) | `whsec_…` (endpoint live) | ❌ |
+| `RESEND_API_KEY` | clave de test/sandbox | clave live (dominio verificado) | ❌ |
+| `NEXT_PUBLIC_URL` | `http://localhost:3000` / URL preview | `https://lasernex.es` | ✅ |
+
+Gestión en Vercel:
+- Los secretos se meten en **Vercel → Settings → Environment Variables**, marcando el entorno (`Production` / `Preview` / `Development`). **Nunca** en el repo.
+- `.env.local` (gitignored) para desarrollo; `.env.example` en el repo **sin valores**, solo nombres documentados.
+- Las claves live se introducen SOLO en Fase 4 (checklist de lanzamiento) y solo en `Production`.
+- Si una clave se filtra: revocar/rotar en el Dashboard de Stripe (Roll key) y en Resend; Vercel redeploya al cambiarla.
+- Regla de PR: ningún commit puede contener `sk_live`, `sk_test`, `whsec_` ni `re_` (grep en revisión; opcional hook de pre-commit).
+
+---
+
+## 4. Rate limiting en rutas API
+
+Contexto real: solo hay **dos rutas con efectos** — crear sesión de Checkout y el webhook. Sin Redis/BD propios (presupuesto 0), la defensa es por capas:
+
+1. **Webhook**: no necesita rate limit clásico — la firma HMAC rechaza cualquier tráfico que no venga de Stripe con coste ~0. Devuelve 400 inmediato.
+2. **Creación de Checkout Session** (`POST`): limitador **best-effort en memoria** por IP (válido porque el coste del abuso es bajo: crear sesiones no cobra dinero ni manda emails):
+
+```ts
+// lib/rate-limit.ts — best-effort por instancia serverless (sin dependencias).
+// Suficiente para <100 pedidos/mes; si algún día hay abuso real,
+// migrar a Vercel WAF o Upstash (tiene capa gratuita).
+const hits = new Map<string, { count: number; reset: number }>();
+
+export function rateLimit(ip: string, limit = 10, windowMs = 60_000): boolean {
+  const now = Date.now();
+  const entry = hits.get(ip);
+  if (!entry || now > entry.reset) {
+    hits.set(ip, { count: 1, reset: now + windowMs });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= limit; // false → responder 429
+}
+```
+
+3. **Vercel** aporta mitigación DDoS de plataforma en todas las capas (gratuita).
+4. Validación estricta de entrada con **Zod** en toda ruta API: cantidades (1–99), `price_id` con formato `price_…` y verificado contra Stripe antes de crear la sesión (nunca se aceptan precios/importes del cliente).
+
+---
+
+## 5. Matriz de responsabilidad
+
+| Riesgo | Lo cubre | Nosotros hacemos |
+|---|---|---|
+| Datos de tarjeta, PCI-DSS | **Stripe** (Checkout hosted, SAQ-A) | No tocar jamás datos de tarjeta |
+| 3D Secure / SCA (PSD2) | **Stripe** | Nada (automático en Checkout) |
+| Fraude en pagos | **Stripe Radar** | Revisar avisos en Dashboard |
+| HTTPS/TLS, certificados | **Vercel** | Forzar HSTS |
+| DDoS de red | **Vercel** | Rate limit aplicativo best-effort |
+| Parcheo de SO/runtime | **Vercel** | Mantener deps de `package.json` al día (Dependabot) |
+| Entregabilidad y spoofing de email | **Resend** + DNS | Configurar SPF/DKIM/DMARC en lasernex.es |
+| Falsificación de pedidos (webhook) | — | **Nuestro**: verificación de firma (§2) |
+| Manipulación de precios/carrito | — | **Nuestro**: precios siempre desde Stripe, validación Zod (§4) |
+| XSS / clickjacking / inyección | — | **Nuestro**: CSP + cabeceras (§1), sin `dangerouslySetInnerHTML` con datos externos |
+| Secretos filtrados | — | **Nuestro**: §3, rotación inmediata |
+| GDPR/LSSI (textos, consentimiento) | — | **Nuestro**: ver `LEGAL.md` |
+
+**Lo que NO existe aquí y por tanto no es riesgo**: contraseñas de usuarios, sesiones de login, BD inyectable (no hay SQL), panel de administración propio.
+
+---
+
+## 6. Auditoría (Fase 4)
+
+- [ ] securityheaders.com → A
+- [ ] Webhook: petición sin firma → 400; con firma inválida → 400; replay >5 min → 400
+- [ ] Intento de checkout con `price_id` inexistente o cantidad 0/negativa → 4xx limpio
+- [ ] `git log -p | grep -cE 'sk_(test|live)|whsec_|re_[A-Za-z0-9]{20,}'` → 0
+- [ ] npm audit / `bun audit` sin críticas
+- [ ] Claves live solo en Vercel Production; test en Preview/Development
