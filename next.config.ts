@@ -1,7 +1,4 @@
-import MDX from "@next/mdx";
 import type { NextConfig } from "next/types";
-
-const withMDX = MDX();
 
 // Cabeceras de seguridad — ver SECURITY.md §1. Importante: el checkout usa
 // Stripe Elements EMBEBIDO (ADR-002 en ARCHITECTURE.md), no una redirección
@@ -54,7 +51,7 @@ const nextConfig: NextConfig = {
 		],
 		formats: ["image/avif", "image/webp"],
 	},
-	transpilePackages: ["next-mdx-remote", "commerce-kit"],
+	transpilePackages: ["commerce-kit"],
 	reactCompiler: true, // graduó de experimental en Next 16
 	experimental: {
 		esmExternals: true,
@@ -62,20 +59,7 @@ const nextConfig: NextConfig = {
 		// ppr (ahora "cacheComponents") queda desactivado: exige marcar cada
 		// boundary dinámico con Suspense; no aporta para un MVP de bajo volumen.
 		cpus: 1,
-		mdxRs: true,
 		inlineCss: true,
-	},
-	webpack: (config) => {
-		return {
-			...config,
-			resolve: {
-				...config.resolve,
-				extensionAlias: {
-					".js": [".js", ".ts"],
-					".jsx": [".jsx", ".tsx"],
-				},
-			},
-		};
 	},
 	rewrites: async () => [
 		{
@@ -85,4 +69,4 @@ const nextConfig: NextConfig = {
 	],
 };
 
-export default withMDX(nextConfig);
+export default nextConfig;
