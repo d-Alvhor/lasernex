@@ -38,7 +38,7 @@ export function CountrySelect({
 						<Popover open={open} onOpenChange={setOpen}>
 							<PopoverTrigger asChild>
 								<Button variant="outline" className="mt-3 w-full justify-between text-base">
-									{selectedCountry ? <>{selectedCountry.label}</> : "Select country…"}
+									{selectedCountry ? <>{selectedCountry.label}</> : "Seleccionar país…"}
 									<CaretSortIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 								</Button>
 							</PopoverTrigger>
@@ -53,7 +53,7 @@ export function CountrySelect({
 					<Drawer open={open} onOpenChange={setOpen}>
 						<DrawerTrigger asChild>
 							<Button variant="outline" className="w-[150px] justify-start">
-								{selectedCountry ? <>{selectedCountry.label}</> : <>+ Set status</>}
+								{selectedCountry ? <>{selectedCountry.label}</> : <>Seleccionar país…</>}
 							</Button>
 						</DrawerTrigger>
 						<DrawerContent>
@@ -83,11 +83,11 @@ function CountryList({
 			}}
 		>
 			<CommandInput
-				placeholder="Find country…"
+				placeholder="Buscar país…"
 				className="my-2 h-8 border border-neutral-200 py-0 focus:border-neutral-300 focus:outline-hidden focus:ring-3 focus:ring-neutral-100"
 			/>
 			<CommandList>
-				<CommandEmpty>No results found.</CommandEmpty>
+				<CommandEmpty>Sin resultados.</CommandEmpty>
 				<CommandGroup>
 					{countries.map((country) => (
 						<CommandItem

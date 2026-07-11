@@ -22,7 +22,7 @@ export const ShippingRatesSection = ({
 
 	return (
 		<fieldset className={cn(`grid gap-6 rounded-lg`, isPending && "cursor-wait")}>
-			<legend className="mb-2 whitespace-nowrap text-sm font-medium">Shipping method</legend>
+			<legend className="mb-2 whitespace-nowrap text-sm font-medium">Método de envío</legend>
 			<RadioGroup
 				className="grid max-w-md gap-4 xs:grid-cols-3"
 				value={optimisticValue ?? undefined}
