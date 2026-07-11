@@ -19,10 +19,20 @@ export default async function StoreLayout({
 
 	return (
 		<>
+			{/* ACCESSIBILITY.md: primer elemento enfocable de la página */}
+			<a
+				href="#main-content"
+				className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-100 focus:rounded-md focus:bg-neutral-900 focus:px-4 focus:py-2 focus:text-white"
+			>
+				Saltar al contenido
+			</a>
 			<CartModalProvider>
 				<Nav />
 				<TooltipProvider>
-					<main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pb-6 pt-2 sm:px-6 lg:px-8">
+					<main
+						id="main-content"
+						className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pb-6 pt-2 sm:px-6 lg:px-8"
+					>
 						{children}
 						<CartModalPage />
 					</main>
