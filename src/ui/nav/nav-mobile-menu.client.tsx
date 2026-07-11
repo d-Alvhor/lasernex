@@ -15,13 +15,13 @@ export const NavMobileMenu = ({ children }: { children: ReactNode }) => {
 	const [isOpen, setIsOpen] = useState(false);
 	return (
 		<Drawer open={isOpen} onOpenChange={setIsOpen}>
-			<DrawerTrigger>
+			<DrawerTrigger aria-label="Abrir menú">
 				<MenuIcon />
 			</DrawerTrigger>
 			<DrawerContent>
 				<DrawerHeader>
-					<DrawerTitle className="text-center">Menu</DrawerTitle>
-					<DrawerDescription className="sr-only">Navigation menu</DrawerDescription>
+					<DrawerTitle className="text-center">Menú</DrawerTitle>
+					<DrawerDescription className="sr-only">Menú de navegación</DrawerDescription>
 				</DrawerHeader>
 				<div
 					onClick={(e) => {
