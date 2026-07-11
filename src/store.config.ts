@@ -3,8 +3,10 @@
 // para piezas impresas en 3D — cámbialas cuando haya catálogo real.
 export const config = {
 	categories: [
+		{ name: "Figuras", slug: "figuras" },
 		{ name: "Decoración", slug: "decoracion" },
 		{ name: "Organización", slug: "organizacion" },
+		{ name: "Merchandising", slug: "merchandising" },
 	],
 
 	social: {

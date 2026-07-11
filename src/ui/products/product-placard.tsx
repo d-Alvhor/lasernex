@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn, deslugify } from "@/lib/utils";
 import type * as Commerce from "commerce-kit";
 
 // Placa generativa DETERMINISTA para catálogo/producto SIN depender de foto.
@@ -141,7 +141,7 @@ export function ProductPlacard({
 					{product.name}
 				</h3>
 				<p className="mt-1 font-sans text-[10px] uppercase tracking-[0.18em]" style={{ color: MUTED }}>
-					{category ? <span>{isOrg ? "Organización" : "Decoración"}</span> : null}
+					{category ? <span>{deslugify(category)}</span> : null}
 					{measure ? (
 						<span aria-hidden>
 							{category ? " · " : ""}
