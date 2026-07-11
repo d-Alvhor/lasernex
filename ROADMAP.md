@@ -35,6 +35,7 @@
 - [ ] Lighthouse ≥ 90 en las 4 categorías (móvil, URL de producción)
 - [ ] Paso a producción: claves live, webhook live, prueba de compra REAL (y su reembolso)
 - [ ] Textos legales validados con el asesor; datos fiscales reales en Stripe
+- [ ] **Licencia del código base resuelta (ARCHITECTURE.md ADR-007)**: AGPL-3.0 (código abierto), licencia comercial de YNS, o confirmación legal de que el uso actual no activa la cláusula de red — gate obligatorio, no técnico
 - [ ] Google Search Console + sitemap enviado
 - [ ] Sesión de formación con la dueña usando `OPERATIONS.md` (que suba ella un producto de verdad)
 - **Hito**: 🚀 lanzamiento
