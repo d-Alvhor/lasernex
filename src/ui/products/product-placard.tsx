@@ -1,10 +1,12 @@
 import { cn, deslugify } from "@/lib/utils";
 import type * as Commerce from "commerce-kit";
+import Image from "next/image";
 
-// Placa generativa DETERMINISTA para catálogo/producto SIN depender de foto.
-// La placa es SIEMPRE un "papel" cálido claro (como una cartela de galería), con
-// arte y texto en tinta fija — así se ve igual y legible en tema claro y oscuro
-// (en oscuro, funciona como una vitrina iluminada). Todo el arte es decorativo.
+// Placa DETERMINISTA para catálogo/producto. Si el producto tiene foto real
+// (Carla la sube en Stripe), se muestra esa foto con un velo inferior para que
+// el texto se lea encima de cualquier imagen. Si NO tiene foto, se genera el
+// arte de "papel" cálido de siempre — así ningún producto se queda sin
+// portada mientras se completa el catálogo.
 
 const INK = "#26221e"; // tinta cálida
 const MUTED = "#857c72"; // gris cálido para etiquetas
@@ -96,6 +98,7 @@ export function ProductPlacard({
 	const measure = extractMeasure(product.name ?? "");
 	const category = product.metadata.category;
 	const isOrg = category === "organizacion" || category === "organización";
+	const photo = product.images[0];
 
 	return (
 		<article
@@ -104,43 +107,77 @@ export function ProductPlacard({
 				ratio,
 				className,
 			)}
-			style={{ backgroundColor: `hsl(${tint})` }}
+			style={photo ? undefined : { backgroundColor: `hsl(${tint})` }}
 		>
-			{/* Textura de líneas de capa (parallax sutil en hover) — tinta fija sobre el papel */}
-			<div
-				aria-hidden
-				className="pointer-events-none absolute inset-0 transition-transform duration-300 ease-out group-hover:translate-y-[2px]"
-				style={{
-					backgroundImage: `repeating-linear-gradient(to bottom, ${HAIR} 0, ${HAIR} 1px, transparent 1px, transparent 6px)`,
-				}}
-			/>
-			{isOrg ? <HatchMotif seed={seed} /> : <RingsMotif seed={seed} />}
-			{/* Glyph fantasma */}
-			<span
-				aria-hidden
-				className={cn(
-					"pointer-events-none absolute inset-0 flex items-center justify-center font-serif leading-none",
-					variant === "feature" ? "text-[38vw] md:text-[22rem]" : "text-[9rem]",
-				)}
-				style={{ color: INK, opacity: 0.07 }}
-			>
-				{initial}
-			</span>
-
-			{priceFormatted && (
-				<span
-					className="absolute right-3 top-3 font-sans text-sm font-medium tabular-nums"
-					style={{ color: INK }}
-				>
-					{priceFormatted}
-				</span>
+			{photo ? (
+				<>
+					<Image
+						src={photo}
+						alt={product.name}
+						fill
+						sizes={
+							variant === "feature"
+								? "(max-width: 1024px) 100vw, 50vw"
+								: "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+						}
+						className="object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+					/>
+					{/* Velo inferior: el texto tiene que leerse encima de cualquier foto */}
+					<div
+						aria-hidden
+						className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent"
+					/>
+				</>
+			) : (
+				<>
+					{/* Textura de líneas de capa (parallax sutil en hover) — tinta fija sobre el papel */}
+					<div
+						aria-hidden
+						className="pointer-events-none absolute inset-0 transition-transform duration-300 ease-out group-hover:translate-y-[2px]"
+						style={{
+							backgroundImage: `repeating-linear-gradient(to bottom, ${HAIR} 0, ${HAIR} 1px, transparent 1px, transparent 6px)`,
+						}}
+					/>
+					{isOrg ? <HatchMotif seed={seed} /> : <RingsMotif seed={seed} />}
+					{/* Glyph fantasma */}
+					<span
+						aria-hidden
+						className={cn(
+							"pointer-events-none absolute inset-0 flex items-center justify-center font-serif leading-none",
+							variant === "feature" ? "text-[38vw] md:text-[22rem]" : "text-[9rem]",
+						)}
+						style={{ color: INK, opacity: 0.07 }}
+					>
+						{initial}
+					</span>
+				</>
 			)}
 
+			{priceFormatted &&
+				(photo ? (
+					<span className="absolute right-3 top-3 rounded-full bg-white/90 px-2 py-0.5 font-sans text-sm font-medium tabular-nums text-neutral-900">
+						{priceFormatted}
+					</span>
+				) : (
+					<span
+						className="absolute right-3 top-3 font-sans text-sm font-medium tabular-nums"
+						style={{ color: INK }}
+					>
+						{priceFormatted}
+					</span>
+				))}
+
 			<div className="relative z-10 p-3">
-				<h3 className="truncate font-serif text-lg leading-tight" style={{ color: INK }}>
+				<h3
+					className="truncate font-serif text-lg leading-tight"
+					style={photo ? { color: "#fff" } : { color: INK }}
+				>
 					{product.name}
 				</h3>
-				<p className="mt-1 font-sans text-[10px] uppercase tracking-[0.18em]" style={{ color: MUTED }}>
+				<p
+					className="mt-1 font-sans text-[10px] uppercase tracking-[0.18em]"
+					style={photo ? { color: "rgba(255,255,255,0.75)" } : { color: MUTED }}
+				>
 					{category ? <span>{deslugify(category)}</span> : null}
 					{measure ? (
 						<span aria-hidden>
@@ -154,7 +191,7 @@ export function ProductPlacard({
 			{/* Disponibilidad — punto clay SIEMPRE con etiqueta (no sólo color) */}
 			<div
 				className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1.5 font-sans text-[10px] uppercase tracking-[0.16em] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-				style={{ color: MUTED }}
+				style={photo ? { color: "rgba(255,255,255,0.85)" } : { color: MUTED }}
 			>
 				<span
 					aria-hidden
