@@ -25,10 +25,10 @@ flowchart TB
     subgraph Stripe["💳 Stripe (fuente de verdad)"]
         direction TB
         P[Products + Prices<br/>= catálogo<br/>gestionado por la dueña<br/>desde el Dashboard]
-        CK[Stripe Checkout hosted<br/>pago · 3DS · PCI · envío]
+        CK[PaymentIntent<br/>+ Stripe Elements embebido<br/>3DS · PCI · envío]
         T[Stripe Tax / IVA 21%]
         I[Recibos + Invoicing<br/>facturas ES]
-        E[checkout.session.completed<br/>y demás eventos]
+        E[payment_intent.succeeded<br/>y demás eventos]
     end
 
     subgraph Resend["📧 Resend"]
@@ -38,7 +38,7 @@ flowchart TB
 
     Cliente -->|HTTPS| Vercel
     N -->|API Stripe<br/>lectura de catálogo| P
-    C -->|crear sesión| CK
+    C -->|Elements embebido<br/>mismo /cart, sin redirect| CK
     CK --> T
     CK -->|pago OK| E
     E -->|webhook firmado| W
@@ -56,12 +56,12 @@ flowchart TB
 1. **Catálogo (`/`)** — El servidor (RSC) lee `Products` + `Prices` activos de la API de Stripe. Se cachea (ISR) para no golpear la API en cada visita; revalidación periódica o bajo demanda.
 2. **Página de producto (`/product/[slug]`)** — Datos del producto desde Stripe (nombre, descripción, imágenes, precio, variantes via metadata). Incluye JSON-LD `schema.org/Product` y Open Graph.
 3. **Carrito** — Estado en cookie firmada (líneas: `price_id` + cantidad). **No hay BD**: el carrito vive en el navegador del cliente.
-4. **Checkout** — Botón "Pagar" crea una `Checkout Session` (server action / route handler) con: líneas del carrito, `shipping_address_collection` limitado a `ES`, `shipping_options` (tarifas de envío), IVA, y `locale: 'es'`. Redirección a la **página hosted de Stripe** (pago, 3D Secure, PCI: todo lo cubre Stripe).
-5. **Pago completado** — Stripe emite `checkout.session.completed` → nuestro endpoint `/api/stripe-webhook` **verifica la firma** con `STRIPE_WEBHOOK_SECRET`.
+4. **Checkout** — En `/cart`, una Server Action crea/actualiza un **PaymentIntent** (`commerce-kit`: `cartCreate`/`updatePaymentIntent`) con las líneas del carrito, dirección de envío limitada a `ES`, tarifa de envío elegida e IVA. Los campos de tarjeta son **Stripe Elements embebido** (`@stripe/react-stripe-js`) montados en la misma página: la tarjeta nunca toca nuestro servidor ni nuestro JS, sin redirección a un dominio de Stripe (ver ADR-002).
+5. **Pago completado** — Stripe emite `payment_intent.succeeded` → nuestro endpoint `/api/stripe-webhook` **verifica la firma** con `STRIPE_WEBHOOK_SECRET`.
 6. **Email de confirmación** — El webhook dispara un email transaccional de marca vía **Resend** (plantilla React Email en español con resumen del pedido).
 7. **Recibo y factura** — Stripe envía su recibo automático; con **Stripe Invoicing** se emite factura con NIF/CIF y numeración correcta cuando el cliente la necesita.
 8. **Gestión del pedido** — La dueña ve el pedido en el Dashboard de Stripe, prepara el paquete y, al enviarlo, dispara el email de "pedido enviado" (Fase 3: mecanismo simple, sin panel propio).
-9. **Vuelta a la tienda** — Stripe redirige a `/pedido/confirmado?session_id=...` (página de gracias, sin datos sensibles en URL más allá del id de sesión).
+9. **Vuelta a la tienda** — Tras confirmar el pago (`stripe.confirmPayment` con Elements), el propio cliente navega a `/order/success?payment_intent=...&payment_intent_client_secret=...` (página de gracias propia, sin redirección de Stripe; sin datos sensibles más allá de los ids del PaymentIntent).
 
 **Reembolsos y desistimiento (14 días)**: la dueña lo hace desde el Dashboard de Stripe (botón "Reembolsar"). Stripe notifica al cliente. Sin código propio.
 
@@ -73,9 +73,9 @@ flowchart TB
 |---|---|---|
 | Catálogo (productos, precios, fotos, variantes) | ✅ Products/Prices + metadata | Solo lectura y render |
 | Carrito | — | ✅ Cookie firmada en el cliente |
-| Pago, 3DS, PCI-DSS | ✅ Checkout hosted | Solo crea la sesión |
+| Pago, 3DS, PCI-DSS | ✅ Elements embebido + PaymentIntent (SAQ A-EP) | Monta los campos, nunca toca datos de tarjeta |
 | Impuestos (IVA 21%) | ✅ Stripe Tax o precios IVA incluido | Configuración |
-| Envíos (zonas y tarifas España) | ✅ Shipping rates en Checkout | Configuración |
+| Envíos (zonas y tarifas España) | ✅ Shipping rates | Formulario propio en `/cart` para elegirla |
 | Pedidos (listado, estado, búsqueda) | ✅ Dashboard | — |
 | Reembolsos / devoluciones | ✅ Dashboard | — |
 | Recibos y facturas | ✅ Recibos automáticos + Invoicing | — |

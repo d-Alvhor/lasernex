@@ -61,7 +61,7 @@ Reglas del carrito:
 - Los botones +/- de cantidad llevan `aria-label="Aumentar cantidad de {producto}"`.
 - El total lleva markup textual normal (los lectores lo leen); cambios de total se anuncian junto con la acción.
 
-**El checkout en sí es de Stripe** (hosted): su accesibilidad la mantiene Stripe. Nuestra responsabilidad termina en el botón "Finalizar compra" y vuelve a empezar en la página de confirmación.
+**El checkout es Stripe Elements EMBEBIDO en `/cart`** (ver ADR-002 en `ARCHITECTURE.md`), no una página hosted de Stripe: la accesibilidad de los campos de tarjeta (iframes de Stripe.js) la mantiene Stripe, pero el resto del formulario propio en esa misma página (dirección, método de envío, botón "Finalizar compra") **es responsabilidad nuestra**, igual que el resto del carrito.
 
 ---
 

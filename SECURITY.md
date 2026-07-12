@@ -47,7 +47,7 @@ const securityHeaders = [
 
 ## 2. Webhook de Stripe: verificación de firma (obligatoria)
 
-El webhook es la única ruta que dispara efectos (email de confirmación). **Nunca** se procesa un evento sin verificar la firma. Patrón para App Router:
+El webhook **no** es la única ruta con efectos (ver §3-4 para `ship` y `revalidate`), pero sí la más crítica (email de confirmación, cobro). **Nunca** se procesa un evento sin verificar la firma. Patrón para App Router:
 
 ```ts
 // app/api/stripe-webhook/route.ts
@@ -80,8 +80,15 @@ export async function POST(req: Request) {
   // 3. Idempotencia: Stripe puede reenviar eventos. El envío de email debe
   //    tolerar duplicados (Resend con header Idempotency-Key = event.id).
   switch (event.type) {
-    case "checkout.session.completed":
-      // enviar email de confirmación vía Resend (Fase 3)
+    case "payment_intent.succeeded":
+      // enviar email de confirmación vía Resend (Fase 3). El checkout real es
+      // Stripe Elements embebido sobre un PaymentIntent (ADR-002), no Checkout
+      // Session hosted: por eso el evento es payment_intent.succeeded, no
+      // checkout.session.completed.
+      break;
+    case "product.created":
+    case "product.updated":
+      // auto-slug + revalidateTag("product") — ver código real del webhook.
       break;
     default:
       // Evento no manejado: 200 para que Stripe no reintente.
@@ -107,6 +114,9 @@ Reglas:
 | `STRIPE_WEBHOOK_SECRET` | `whsec_…` (CLI / endpoint test) | `whsec_…` (endpoint live) | ❌ |
 | `RESEND_API_KEY` | clave de test/sandbox | clave live (dominio verificado) | ❌ |
 | `NEXT_PUBLIC_URL` | `http://localhost:3000` / URL preview | `https://lasernex.es` | ✅ |
+| `SHIP_NOTIFICATION_SECRET` | token de prueba | token real, distinto | ❌ (va en la URL del enlace de "pedido enviado", solo la dueña la tiene) |
+| `STORE_REFRESH_SECRET` | token de prueba | token real, distinto | ❌ (va en la URL del enlace de "refrescar tienda", solo la dueña la tiene) |
+| `TRIEVE_API_KEY` | opcional (solo si se usa el buscador) | opcional | ❌ |
 
 Gestión en Vercel:
 - Los secretos se meten en **Vercel → Settings → Environment Variables**, marcando el entorno (`Production` / `Preview` / `Development`). **Nunca** en el repo.
@@ -119,13 +129,13 @@ Gestión en Vercel:
 
 ## 4. Rate limiting en rutas API
 
-Contexto real: solo hay **dos rutas con efectos** — crear sesión de Checkout y el webhook. Sin Redis/BD propios (presupuesto 0), la defensa es por capas:
+Contexto real (no hay Checkout Session hosted, ver ADR-002): las rutas/acciones con efectos son (1) el webhook, (2) `findOrCreateCartIdFromCookiesAction` (Server Action que crea el PaymentIntent/carrito), (3) `/api/orders/[paymentIntentId]/ship` (dispara email de envío) y (4) `/api/orders revalidate` (refresca el catálogo). Sin Redis/BD propios (presupuesto 0), la defensa es por capas:
 
-1. **Webhook**: no necesita rate limit clásico — la firma HMAC rechaza cualquier tráfico que no venga de Stripe con coste ~0. Devuelve 400 inmediato.
-2. **Creación de Checkout Session** (`POST`): limitador **best-effort en memoria** por IP (válido porque el coste del abuso es bajo: crear sesiones no cobra dinero ni manda emails):
+1. **Webhook**: no necesita rate limit clásico — la firma HMAC rechaza cualquier tráfico que no venga de Stripe con coste ~0. Devuelve 401 inmediato.
+2. **Creación de carrito/PaymentIntent, `ship` y `revalidate`**: limitador **best-effort en memoria** por IP, **implementado** en `src/lib/rate-limit.ts` y aplicado en los tres puntos (el coste del abuso es bajo: crear carritos no cobra dinero; `ship`/`revalidate` están además protegidos por un secreto compartido comparado en tiempo constante):
 
 ```ts
-// lib/rate-limit.ts — best-effort por instancia serverless (sin dependencias).
+// src/lib/rate-limit.ts — best-effort por instancia serverless (sin dependencias).
 // Suficiente para <100 pedidos/mes; si algún día hay abuso real,
 // migrar a Vercel WAF o Upstash (tiene capa gratuita).
 const hits = new Map<string, { count: number; reset: number }>();
@@ -143,7 +153,7 @@ export function rateLimit(ip: string, limit = 10, windowMs = 60_000): boolean {
 ```
 
 3. **Vercel** aporta mitigación DDoS de plataforma en todas las capas (gratuita).
-4. Validación estricta de entrada con **Zod** en toda ruta API: cantidades (1–99), `price_id` con formato `price_…` y verificado contra Stripe antes de crear la sesión (nunca se aceptan precios/importes del cliente).
+4. Validación estricta de entrada con **Zod** en toda ruta API: cantidades (1–99), `price_id` con formato `price_…` y verificado contra Stripe antes de crear el PaymentIntent (nunca se aceptan precios/importes del cliente).
 
 ---
 
@@ -151,8 +161,8 @@ export function rateLimit(ip: string, limit = 10, windowMs = 60_000): boolean {
 
 | Riesgo | Lo cubre | Nosotros hacemos |
 |---|---|---|
-| Datos de tarjeta, PCI-DSS | **Stripe** (Checkout hosted, SAQ-A) | No tocar jamás datos de tarjeta |
-| 3D Secure / SCA (PSD2) | **Stripe** | Nada (automático en Checkout) |
+| Datos de tarjeta, PCI-DSS | **Stripe** (Elements embebido, SAQ A-EP — ver ADR-002) | No tocar jamás datos de tarjeta |
+| 3D Secure / SCA (PSD2) | **Stripe** | Nada (automático vía Stripe Elements/PaymentIntent) |
 | Fraude en pagos | **Stripe Radar** | Revisar avisos en Dashboard |
 | HTTPS/TLS, certificados | **Vercel** | Forzar HSTS |
 | DDoS de red | **Vercel** | Rate limit aplicativo best-effort |
@@ -162,7 +172,7 @@ export function rateLimit(ip: string, limit = 10, windowMs = 60_000): boolean {
 | Manipulación de precios/carrito | — | **Nuestro**: precios siempre desde Stripe, validación Zod (§4) |
 | XSS / clickjacking / inyección | — | **Nuestro**: CSP + cabeceras (§1), sin `dangerouslySetInnerHTML` con datos externos |
 | Secretos filtrados | — | **Nuestro**: §3, rotación inmediata |
-| GDPR/LSSI (textos, consentimiento) | — | **Nuestro**: ver `LEGAL.md` |
+| GDPR/LSSI (textos, consentimiento) | — | **Nuestro**: ver `src/app/(store)/legal/*` (fuente de verdad viva) |
 
 **Lo que NO existe aquí y por tanto no es riesgo**: contraseñas de usuarios, sesiones de login, BD inyectable (no hay SQL), panel de administración propio.
 

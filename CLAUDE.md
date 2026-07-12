@@ -71,7 +71,7 @@ Los detalles de infraestructura de deploy (dominio, DNS, cuentas) se llevan en p
 - **Base de código**: fork lógico de `yournextstore/yournextstore` en el commit **`a98a19f`** (ene-2025, el último "pure-Stripe": Next 15 + `stripe@17` + `STRIPE_SECRET_KEY`). Decisión: ADR-004. El `main` actual de YNS usa su SaaS (`YNS_API_KEY`) y NO nos sirve. `commerce-kit` está **clavado en 0.0.39** (ADR-006): desde ~0.10.0 depende del SaaS de YNS. No hay upstream del que traer mejoras: el mantenimiento (parches de seguridad de Next/React/stripe) recae en este árbol.
 - **Stack**: Next.js 16 App Router + TypeScript estricto (5.9.3) + Tailwind 4 · Stripe vía `commerce-kit@0.0.39` (Elements embebido/PaymentIntent — ver ADR-002, Products/Prices, Tax/IVA incluido, Invoicing, webhooks) · Resend (emails de marca, React Email) · Vercel free tier. Gestor: **bun**. Lint: **biome**. Tests: **vitest**.
 - **Marca**: Lasernex — logo "7L" en círculo negro, estética minimalista. Dominio: lasernex.es. Diseño actual **"Sala Blanca"** (Fraunces + Hanken Grotesk, papel cálido, tema claro/oscuro, `ProductPlacard` generativo) — tokens en `globals.css`, fuentes en `fonts.ts`. **No revertir** a la estética shadcn azulada anterior.
-- **Mercado**: España. IVA 21% con **precios IVA-incluido**. GDPR/LSSI/TRLGDCU (ver LEGAL.md). Desistimiento 14 días (excepto personalizados). <100 pedidos/mes.
+- **Mercado**: España. IVA 21% con **precios IVA-incluido**. GDPR/LSSI/TRLGDCU (ver `src/app/(store)/legal/*`, fuente de verdad viva). Desistimiento 14 días (excepto personalizados). <100 pedidos/mes.
 - **Idioma de trabajo con Álvaro**: español. Código con comentarios breves y solo donde aportan.
 
 ## Estado del proyecto

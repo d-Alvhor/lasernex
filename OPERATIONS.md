@@ -18,7 +18,13 @@
    - **Imágenes**: sube las fotos. ⚠️ **La primera foto es la principal** (la que sale en el catálogo y cuando alguien comparte el enlace): usa una buena, en horizontal si puedes, de al menos 1200 px de ancho.
 4. En **Precio**: pon el precio **con IVA incluido** (lo que paga el cliente, ej. 24,90 €), moneda **EUR**, tipo **Único** (no recurrente).
 5. Si el producto tiene **variantes** (color, tamaño): de momento, la forma sencilla es crear **un precio por variante** o **un producto por variante** ("Maceta 12 cm — Blanca", "Maceta 12 cm — Negra"). Te dejaremos montado un ejemplo para copiar.
-6. Guarda. **En la web aparece solo, como mucho en 1 hora.** (Si quieres verlo ya: abre el enlace "refrescar tienda" que te daremos guardado en favoritos.)
+6. Guarda. **Normalmente aparece en la web en segundos, solo.** En algún caso raro (sobre todo justo al crear un producto muy nuevo) su ficha individual puede tardar un par de minutos aunque ya salga en el catálogo — si tarda más, abre este enlace guardado en marcadores para forzar el refresco:
+
+   ```
+   https://lasernex.es/api/revalidate?token=TU_SECRETO
+   ```
+
+   (**TU_SECRETO**: pregúntale a Álvaro si no lo tienes guardado — es distinto del secreto de "pedido enviado".) Verás un mensaje de confirmación al abrirlo.
 
 **Para retirar un producto** (se agotó el material, ya no lo haces): abre el producto en Stripe → **Archivar**. Desaparece de la web solo. Para volver a venderlo: **Desarchivar**.
 
@@ -28,12 +34,16 @@
 
 ## 2. Cuando entra un pedido
 
-Te llegará un **email de Stripe** avisando de cada pago. Además:
+Te llegarán **dos emails** por cada venta: uno de **Stripe** avisando del pago, y otro **nuestro** a tu correo titulado **"Nuevo pedido"** con el resumen y un botón **"Marcar como enviado"** ya preparado — no tienes que copiar ni pegar nada.
 
 1. En **dashboard.stripe.com → Pagos** ves todos los pedidos: quién compró, qué, cuánto y su **dirección de envío**.
 2. Haz clic en el pago para ver el detalle completo (productos, dirección, email del cliente).
 3. Fabrica/prepara el paquete y envíalo por mensajería.
-4. Cuando lo envíes, dispara el **email de "pedido enviado"** al cliente pegando esta dirección en la barra de tu navegador (o guárdala como marcador/atajo):
+4. Cuando lo envíes, abre el email **"Nuevo pedido"** de esa venta y pulsa **"Marcar como enviado"**. Eso dispara al cliente el email de "tu pedido ya va de camino".
+
+   **Para añadir el número de seguimiento** (opcional): antes de pulsar, puedes editar esa URL y añadir al final `&tracking=1234567890` (el número tal cual) y `&trackingUrl=https://...` (el enlace de seguimiento de la mensajería). Si pones `trackingUrl`, el cliente recibe un enlace clicable "Seguir el envío" en su email; con solo `tracking` ve el número, sin enlace.
+
+   **Si ese email no te llegó** (mira spam) puedes construir el enlace tú misma, pegando esto en la barra de tu navegador:
 
    ```
    https://lasernex.es/api/orders/EL_ID_DEL_PAGO/ship?token=TU_SECRETO
@@ -41,9 +51,8 @@ Te llegará un **email de Stripe** avisando de cada pago. Además:
 
    - **EL_ID_DEL_PAGO**: lo copias de la URL del pago en el Dashboard de Stripe (empieza por `pi_...`).
    - **TU_SECRETO**: el código que se configuró una vez al lanzar la tienda (pregúntale a Álvaro si no lo tienes).
-   - Si tienes número de seguimiento de la mensajería, añádelo al final: `&tracking=1234567890`.
 
-   Al abrir el enlace verás un mensaje confirmando que el email se ha enviado. No hace falta contraseña ni iniciar sesión en nada — es un enlace de un solo uso por pedido.
+   Al abrir el enlace verás un mensaje confirmando que el email se ha enviado. No hace falta contraseña ni iniciar sesión en nada.
 
 Consejo: usa la vista **Pagos** como tu lista de tareas — lo de arriba es lo más nuevo. Si un día hay mucho movimiento, apúntate en una libreta o nota del móvil cuáles ya enviaste.
 
@@ -90,7 +99,7 @@ El dinero llega a tu cuenta bancaria automáticamente (por defecto cada pocos d�
 
 | Problema | Qué hacer |
 |---|---|
-| Un producto no aparece en la web | ¿Está **activo** (no archivado) en Stripe y tiene precio en EUR? Espera 1 h o usa el enlace de refrescar. Si sigue sin salir, avisa a Álvaro. |
+| Un producto no aparece en la web | ¿Está **activo** (no archivado) en Stripe y tiene precio en EUR? Usa el enlace de "refrescar tienda" (§1). Si sigue sin salir, avisa a Álvaro. |
 | Un cliente dice que pagó pero no ves el pago | En **Pagos**, busca por su email. Si no está, no se completó el pago: pídele que lo intente de nuevo. |
 | Email de Stripe sobre una "disputa" (chargeback) | El cliente reclamó al banco. Entra en el aviso, aporta lo que Stripe pida (justificante de envío, emails). Tiene fecha límite: no lo dejes pasar. |
 | La web está caída | Avisa a Álvaro. (Los pagos en curso en Stripe no se pierden.) |
