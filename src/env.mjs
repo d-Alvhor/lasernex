@@ -25,6 +25,9 @@ export const env = createEnv({
 		// Token compartido para el enlace de "marcar como enviado" (OPERATIONS.md) — no es
 		// autenticación de usuarios (ADR-003): un único secreto que solo conoce la dueña.
 		SHIP_NOTIFICATION_SECRET: z.string().optional(),
+		// Token compartido para el enlace de "refrescar tienda" (OPERATIONS.md) — mismo
+		// patrón que SHIP_NOTIFICATION_SECRET, sin cuenta de usuario.
+		STORE_REFRESH_SECRET: z.string().optional(),
 	},
 	client: {
 		// Can be provided via env or parameters to Commerce Kit, thus optional
@@ -55,6 +58,7 @@ export const env = createEnv({
 		RESEND_API_KEY: process.env.RESEND_API_KEY,
 		RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
 		SHIP_NOTIFICATION_SECRET: process.env.SHIP_NOTIFICATION_SECRET,
+		STORE_REFRESH_SECRET: process.env.STORE_REFRESH_SECRET,
 
 		NEXT_PUBLIC_LANGUAGE: process.env.NEXT_PUBLIC_LANGUAGE,
 	},

@@ -1,8 +1,18 @@
+import { timingSafeEqual } from "node:crypto";
 import { env } from "@/env.mjs";
 import { sendOrderShippedEmail } from "@/lib/email/resend";
+import { rateLimit } from "@/lib/rate-limit";
 import * as Commerce from "commerce-kit";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+
+// Compara tokens sin filtrar por temporización (evita side-channel timing attack
+// sobre el secreto compartido; el "!==" directo sí es vulnerable a esto).
+function safeTokenEqual(a: string, b: string): boolean {
+	const bufA = Buffer.from(a);
+	const bufB = Buffer.from(b);
+	return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
+}
 
 // Enlace que la dueña puede guardar en marcadores y abrir cuando envía un
 // pedido (ver OPERATIONS.md). No hay panel de administración propio
@@ -26,6 +36,11 @@ export async function GET(request: Request, props: { params: Promise<{ paymentIn
 		return htmlResponse("SHIP_NOTIFICATION_SECRET no está configurado en el servidor.", 500);
 	}
 
+	const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+	if (!rateLimit(ip)) {
+		return htmlResponse("Demasiados intentos. Espera un minuto y vuelve a intentarlo.", 429);
+	}
+
 	const { paymentIntentId } = await props.params;
 	const { searchParams } = new URL(request.url);
 	const parsed = querySchema.safeParse(Object.fromEntries(searchParams));
@@ -34,7 +49,7 @@ export async function GET(request: Request, props: { params: Promise<{ paymentIn
 		return htmlResponse("Enlace inválido: faltan parámetros.", 400);
 	}
 
-	if (parsed.data.token !== env.SHIP_NOTIFICATION_SECRET) {
+	if (!safeTokenEqual(parsed.data.token, env.SHIP_NOTIFICATION_SECRET)) {
 		return htmlResponse("Enlace no autorizado.", 401);
 	}
 

@@ -1,3 +1,4 @@
+import { publicUrl } from "@/env.mjs";
 import { formatProductName } from "@/lib/utils";
 import type * as Commerce from "commerce-kit";
 import { getDecimalFromStripeAmount } from "commerce-kit/currencies";
@@ -5,7 +6,15 @@ import type { ItemList, Product, Thing, WebSite, WithContext } from "schema-dts"
 import type Stripe from "stripe";
 
 export const JsonLd = <T extends Thing>({ jsonLd }: { jsonLd: WithContext<T> }) => {
-	return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />;
+	// Escapa "<" para que un texto de Stripe (nombre/descripción de producto) no pueda
+	// cerrar este <script> e inyectar HTML/JS (único dangerouslySetInnerHTML del proyecto,
+	// ver SECURITY.md/SEO.md).
+	return (
+		<script
+			type="application/ld+json"
+			dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replaceAll("<", "\\u003c") }}
+		/>
+	);
 };
 
 export const mappedProductToJsonLd = (product: Commerce.MappedProduct): WithContext<Product> => {
@@ -18,8 +27,10 @@ export const mappedProductToJsonLd = (product: Commerce.MappedProduct): WithCont
 		image: product.images[0],
 		description: product.description ?? undefined,
 		sku: product.id,
+		brand: { "@type": "Brand", name: "Lasernex" },
 		offers: {
 			"@type": "Offer",
+			url: `${publicUrl}/product/${product.metadata.slug}`,
 			price: getDecimalFromStripeAmount({
 				amount: product.default_price.unit_amount ?? 0,
 				currency: product.default_price.currency,
@@ -27,6 +38,20 @@ export const mappedProductToJsonLd = (product: Commerce.MappedProduct): WithCont
 			priceCurrency: product.default_price.currency,
 			availability:
 				product.metadata.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+			// Envío a península y devolución de 14 días: política única de la tienda,
+			// igual para todos los productos (ver /legal/desistimiento y /legal/condiciones).
+			shippingDetails: {
+				"@type": "OfferShippingDetails",
+				shippingDestination: { "@type": "DefinedRegion", addressCountry: "ES" },
+			},
+			hasMerchantReturnPolicy: {
+				"@type": "MerchantReturnPolicy",
+				applicableCountry: "ES",
+				returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+				merchantReturnDays: 14,
+				returnMethod: "https://schema.org/ReturnByMail",
+				returnFees: "https://schema.org/ReturnFeesCustomerResponsibility",
+			},
 		},
 	};
 };

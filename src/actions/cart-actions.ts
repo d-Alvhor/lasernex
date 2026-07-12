@@ -1,8 +1,10 @@
 "use server";
 
 import { clearCartCookie, getCartCookieJson, setCartCookieJson } from "@/lib/cart";
+import { rateLimit } from "@/lib/rate-limit";
 import * as Commerce from "commerce-kit";
 import { updateTag } from "next/cache";
+import { headers } from "next/headers";
 
 export async function getCartFromCookiesAction() {
 	const cartJson = await getCartCookieJson();
@@ -31,6 +33,12 @@ export async function findOrCreateCartIdFromCookiesAction() {
 		return structuredClone(cart);
 	}
 
+	// Rate limit best-effort sobre la creación de carrito/PaymentIntent — ver SECURITY.md §4.
+	const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+	if (!rateLimit(ip)) {
+		throw new Error("Demasiadas peticiones. Espera un minuto y vuelve a intentarlo.");
+	}
+
 	const newCart = await Commerce.cartCreate();
 	await setCartCookieJson({
 		id: newCart.id,
@@ -49,8 +57,6 @@ export async function clearCartCookieAction() {
 
 	await clearCartCookie();
 	updateTag(`cart-${cookie.id}`);
-	// FIXME not ideal, revalidate per domain instead (multi-tenant)
-	updateTag(`admin-orders`);
 }
 
 export async function addToCartAction(formData: FormData) {
