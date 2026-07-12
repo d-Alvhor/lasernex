@@ -45,7 +45,6 @@ Fase 0 produjo los documentos que **gobiernan el proyecto**. Antes de tocar cód
 | `OPERATIONS.md` | Manual de la dueña — si un cambio altera cómo opera ella, actualizar este doc EN EL MISMO PR |
 | `ROADMAP.md` | MVP 4 semanas, fase 2 y **anti-roadmap** (lo vetado) |
 | `DEPLOY.md` | Guía paso a paso del deploy en Vercel |
-| `docs/superpowers/specs/` · `docs/superpowers/plans/` | Specs y planes de implementación aprobados (p. ej. el molde replicable) |
 
 ## Reglas duras (violarlas = PR rechazado)
 
@@ -83,7 +82,6 @@ Fase 0 produjo los documentos que **gobiernan el proyecto**. Antes de tocar cód
 - ✅ **PAGOS REALES ACTIVADOS** (2026-07-11): claves `pk_live`/`sk_live` en Vercel **solo en producción** (preview queda sin claves = seguro, sin cobros de prueba accidentales). Webhook LIVE `we_1Ts7lX…` → `/api/stripe-webhook` (eventos `payment_intent.succeeded`, `product.created/updated`) con su secreto en Vercel. Tarifa de envío LIVE `shr_1Ts7lM…` (Envío estándar península, 4,90 € IVA incl., 3-5 días). Verificado: la web sirve `pk_live` y lee el catálogo real (vacío). **El catálogo LIVE está vacío a propósito: Carla lo mete de cero en Modo real** (aviso en `OPERATIONS.md §1`). Falta la prueba humana: 1 compra real con tarjeta real.
 - ✅ **LICENCIA AGPL-3.0** (ADR-007, decidido). Repo **PÚBLICO** + aviso en footer = cumplimiento §13, gratis.
 - ✅ **DISEÑO "SALA BLANCA"**: front rehecho por completo (ver Datos del proyecto). El sistema de diseño vive en `globals.css` (tokens HSL) + `fonts.ts`.
-- 🟢 **MOLDE REPLICABLE** (en curso, 2026-07-12): spec aprobada en `docs/superpowers/specs/2026-07-11-molde-plantilla-tiendas-design.md` para convertir esta tienda en la plantilla-madre `d-Alvhor/molde` (repo privado) desde la que montar tiendas nuevas en 1-2 h, con manual de la dueña y gate `comprobar-tienda`. Plan A en redacción.
 - 🟡 **FASE 4** parcial: cabeceras seguridad + accesibilidad OK. Lighthouse no corre en este entorno (Chrome crashea al iniciar Tracing — no es bug del código; usar PageSpeed Insights contra producción).
 
 ### Bloqueos reales que quedan (necesitan a Álvaro/Carla, no son técnicos)
