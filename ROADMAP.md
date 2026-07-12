@@ -58,4 +58,4 @@
 | **Newsletter** | Fidelización | 🟡 Medio | Exige consentimiento GDPR y proveedor; solo si hay tracción |
 | **Búsqueda/filtros avanzados** | UX con catálogo grande | 🟡 Medio | Solo si el catálogo supera ~30-40 productos; mientras, categorías por metadata bastan |
 
-**Anti-roadmap** (decidido que NO, para que nadie lo "mejore" por su cuenta): panel de administración propio, base de datos, cuentas de usuario, CMS, app móvil, multi-idioma en MVP, checkout embebido. Cada uno rompe el principio de coste-0/mantenimiento-0 (ADRs 001-003).
+**Anti-roadmap** (decidido que NO, para que nadie lo "mejore" por su cuenta): panel de administración propio, base de datos, cuentas de usuario, CMS, app móvil, multi-idioma en MVP, checkout propio construido desde cero (procesar tarjetas nosotros — no confundir con el checkout embebido de Stripe Elements de ADR-002, que sí es la implementación actual y correcta). Cada uno rompe el principio de coste-0/mantenimiento-0 (ADRs 001-003).
