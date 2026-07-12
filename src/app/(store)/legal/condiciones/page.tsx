@@ -13,8 +13,8 @@ export default function CondicionesPage() {
 
 			<ol>
 				<li>
-					<strong>Identidad del vendedor</strong>: Carla Manso Rojas, NIF 29517704X. Contacto:
-					shop.lasernex@gmail.com (domicilio a efectos legales disponible a petición).
+					<strong>Identidad del vendedor</strong>: Carla Manso Rojas, NIF 29517704X, Calle Ada, Sevilla.
+					Contacto: shop.lasernex@gmail.com.
 				</li>
 				<li>
 					<strong>Productos</strong>: piezas fabricadas por impresión 3D. Las fotos son orientativas; al ser

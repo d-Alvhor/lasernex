@@ -12,10 +12,7 @@ export default function PrivacidadPage() {
 			<h1>Política de privacidad</h1>
 
 			<h2>Responsable</h2>
-			<p>
-				Carla Manso Rojas, NIF 29517704X. Contacto: shop.lasernex@gmail.com (domicilio a efectos legales
-				disponible a petición).
-			</p>
+			<p>Carla Manso Rojas, NIF 29517704X, Calle Ada, Sevilla. Contacto: shop.lasernex@gmail.com.</p>
 
 			<h2>Qué datos tratamos y para qué</h2>
 			<table>

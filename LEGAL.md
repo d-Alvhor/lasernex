@@ -4,13 +4,13 @@
 > Marco: GDPR/RGPD + LOPDGDD, LSSI-CE, TRLGDCU (consumidores), IVA español.
 
 Datos que hay que rellenar en todos los textos:
-- Carla Manso Rojas — nombre completo o razón social · 29517704X · `[DOMICILIO]` · shop.lasernex@gmail.com (p. ej. shop.lasernex@gmail.com)
+- Carla Manso Rojas — nombre completo o razón social · 29517704X · Calle Ada, Sevilla · shop.lasernex@gmail.com (p. ej. shop.lasernex@gmail.com)
 
 ---
 
 ## 1. Aviso legal (`/legal/aviso-legal`)
 
-**Titular del sitio** (art. 10 LSSI): Este sitio web, lasernex.es, es titularidad de Carla Manso Rojas, con NIF 29517704X y domicilio en `[DOMICILIO]`. Contacto: shop.lasernex@gmail.com.
+**Titular del sitio** (art. 10 LSSI): Este sitio web, lasernex.es, es titularidad de Carla Manso Rojas, con NIF 29517704X y domicilio en Calle Ada, Sevilla. Contacto: shop.lasernex@gmail.com.
 
 **Objeto**: lasernex.es es una tienda online de venta de piezas y objetos fabricados mediante impresión 3D.
 
@@ -24,7 +24,7 @@ Datos que hay que rellenar en todos los textos:
 
 ## 2. Política de privacidad (`/legal/privacidad`)
 
-**Responsable**: Carla Manso Rojas, NIF 29517704X, `[DOMICILIO]`, shop.lasernex@gmail.com.
+**Responsable**: Carla Manso Rojas, NIF 29517704X, Calle Ada, Sevilla, shop.lasernex@gmail.com.
 
 **Qué datos tratamos y para qué**:
 
@@ -62,7 +62,7 @@ Conforme al art. 22.2 LSSI y las guías de la AEPD, las cookies estrictamente ne
 
 ## 4. Condiciones de venta (`/legal/condiciones`)
 
-1. **Identidad del vendedor**: Carla Manso Rojas, NIF 29517704X, `[DOMICILIO]`, shop.lasernex@gmail.com.
+1. **Identidad del vendedor**: Carla Manso Rojas, NIF 29517704X, Calle Ada, Sevilla, shop.lasernex@gmail.com.
 2. **Productos**: piezas fabricadas por impresión 3D. Las fotos son orientativas; al ser fabricación aditiva pueden existir pequeñas variaciones de acabado propias del proceso (líneas de capa), que no constituyen defecto.
 3. **Precios**: en euros, **IVA (21 %) incluido**. Los gastos de envío se muestran antes de confirmar el pago.
 4. **Pedido y pago**: el pedido se realiza como invitado a través de Stripe (tarjeta y métodos habilitados). El contrato se perfecciona al recibir la confirmación de pago; se envía email de confirmación con el resumen.
