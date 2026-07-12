@@ -133,7 +133,9 @@ export default async function SingleProductPage(props: {
 								src={images[0] as string}
 								loading="eager"
 								priority
-								alt={product.name}
+								alt={[product.name, category ? deslugify(category) : null, measure]
+									.filter(Boolean)
+									.join(", ")}
 							/>
 						) : (
 							<ProductPlacard product={product} ratio="aspect-[4/5]" variant="feature" />

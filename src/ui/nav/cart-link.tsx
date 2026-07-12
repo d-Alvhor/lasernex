@@ -4,7 +4,13 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { YnsLink } from "../yns-link";
 
-export const CartLink = ({ children }: { children: ReactNode }) => {
+export const CartLink = ({
+	children,
+	"aria-label": ariaLabel,
+}: {
+	children: ReactNode;
+	"aria-label": string;
+}) => {
 	const pathname = usePathname();
 	const { setOpen } = useCartModal();
 	return (
@@ -20,6 +26,8 @@ export const CartLink = ({ children }: { children: ReactNode }) => {
 			scroll={false}
 			className="relative block h-6 w-6"
 			prefetch={true}
+			aria-label={ariaLabel}
+			aria-haspopup="dialog"
 		>
 			{children}
 		</YnsLink>

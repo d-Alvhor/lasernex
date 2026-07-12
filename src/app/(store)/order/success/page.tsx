@@ -26,19 +26,19 @@ export default async function OrderDetailsPage(props: {
 	}>;
 }) {
 	const searchParams = await props.searchParams;
+	const t = await getTranslations("/order.page");
 	if (
 		typeof searchParams.payment_intent !== "string" ||
 		typeof searchParams.payment_intent_client_secret !== "string"
 	) {
-		return <div>Invalid order details</div>;
+		return <div>{t("invalidDetails")}</div>;
 	}
 	const order = await Commerce.orderGet(searchParams.payment_intent);
 
 	if (!order) {
-		return <div>Order not found</div>;
+		return <div>{t("notFound")}</div>;
 	}
 	const cookie = await getCartCookieJson();
-	const t = await getTranslations("/order.page");
 	const locale = await getLocale();
 
 	const isDigital = (lines: Commerce.Order["lines"]) => {
@@ -66,16 +66,15 @@ export default async function OrderDetailsPage(props: {
 							<h3 className="row-start-1 font-semibold leading-none text-neutral-700">
 								{formatProductName(line.product.name, line.product.metadata.variant)}
 							</h3>
-							{line.product.images.map((image) => (
+							{line.product.images[0] && (
 								<Image
-									key={image}
 									className="col-start-1 row-span-3 row-start-1 mt-0.5 w-16 rounded-lg object-cover object-center transition-opacity sm:mt-0 sm:w-32"
-									src={image}
+									src={line.product.images[0]}
 									width={128}
 									height={128}
 									alt=""
 								/>
-							))}
+							)}
 							<div className="prose row-start-2 text-secondary-foreground">
 								<Markdown source={line.product.description || ""} />
 							</div>
@@ -142,7 +141,7 @@ export default async function OrderDetailsPage(props: {
 				<h2 className="sr-only">{t("detailsTitle")}</h2>
 				{isDigital(order.lines) && (
 					<div className="mb-8">
-						<h3 className="font-semibold leading-none text-neutral-700">Digital Asset</h3>
+						<h3 className="font-semibold leading-none text-neutral-700">{t("digitalAsset")}</h3>
 						<ul className="mt-3">
 							{order.lines
 								.filter((line) => line.product.metadata.digitalAsset)

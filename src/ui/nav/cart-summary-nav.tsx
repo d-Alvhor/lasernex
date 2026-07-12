@@ -35,24 +35,22 @@ const CartSummaryNavInner = async () => {
 	const t = await getTranslations("Global.nav.cartSummary");
 	const locale = await getLocale();
 
+	const totalFormatted = formatMoney({ amount: total, currency: cart.cart.currency, locale });
+
 	return (
 		<TooltipProvider>
 			<Tooltip delayDuration={100}>
 				<TooltipTrigger asChild>
 					<div>
-						<CartLink>
-							<ShoppingBagIcon />
-							<span className="absolute bottom-0 right-0 inline-flex h-5 w-5 translate-x-1/2 translate-y-1/2 items-center justify-center rounded-full border-2 bg-white text-center text-xs">
-								<span className="sr-only">{t("itemsInCart")}: </span>
+						<CartLink
+							aria-label={`${t("totalItems", { count: totalItems })} · ${t("total")}: ${totalFormatted}`}
+						>
+							<ShoppingBagIcon aria-hidden />
+							<span
+								aria-hidden
+								className="absolute bottom-0 right-0 inline-flex h-5 w-5 translate-x-1/2 translate-y-1/2 items-center justify-center rounded-full border-2 bg-white text-center text-xs"
+							>
 								{totalItems}
-							</span>
-							<span className="sr-only">
-								{t("total")}:{" "}
-								{formatMoney({
-									amount: total,
-									currency: cart.cart.currency,
-									locale,
-								})}
 							</span>
 						</CartLink>
 					</div>

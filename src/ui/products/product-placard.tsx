@@ -99,6 +99,9 @@ export function ProductPlacard({
 	const category = product.metadata.category;
 	const isOrg = category === "organizacion" || category === "organización";
 	const photo = product.images[0];
+	const inStock = product.metadata.stock > 0;
+	// Alt más descriptivo que el nombre desnudo (ACCESSIBILITY.md): añade categoría/medida si existen.
+	const altText = [product.name, category ? deslugify(category) : null, measure].filter(Boolean).join(", ");
 
 	return (
 		<article
@@ -113,7 +116,7 @@ export function ProductPlacard({
 				<>
 					<Image
 						src={photo}
-						alt={product.name}
+						alt={altText}
 						fill
 						sizes={
 							variant === "feature"
@@ -188,17 +191,20 @@ export function ProductPlacard({
 				</p>
 			</div>
 
-			{/* Disponibilidad — punto clay SIEMPRE con etiqueta (no sólo color) */}
+			{/* Disponibilidad real — punto de color SIEMPRE con etiqueta (no sólo color) */}
 			<div
-				className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1.5 font-sans text-[10px] uppercase tracking-[0.16em] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+				className={cn(
+					"pointer-events-none absolute bottom-3 right-3 flex items-center gap-1.5 font-sans text-[10px] uppercase tracking-[0.16em] transition-opacity duration-300",
+					inStock ? "opacity-0 group-hover:opacity-100" : "opacity-100",
+				)}
 				style={photo ? { color: "rgba(255,255,255,0.85)" } : { color: MUTED }}
 			>
 				<span
 					aria-hidden
 					className="h-1.5 w-1.5 rounded-full"
-					style={{ backgroundColor: "hsl(14 42% 48%)" }}
+					style={{ backgroundColor: inStock ? "hsl(14 42% 48%)" : "hsl(0 0% 55%)" }}
 				/>
-				Bajo demanda
+				{inStock ? "Bajo demanda" : "Agotado"}
 			</div>
 		</article>
 	);

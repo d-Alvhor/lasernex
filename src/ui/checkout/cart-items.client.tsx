@@ -11,11 +11,13 @@ import { useFormStatus } from "react-dom";
 export const CartItemQuantity = ({
 	quantity,
 	productId,
+	productName,
 	cartId,
 	onChange,
 }: {
 	quantity: number;
 	productId: string;
+	productName: string;
 	cartId: string;
 	onChange: (args: { productId: string; action: "INCREASE" | "DECREASE" }) => void;
 }) => {
@@ -74,8 +76,12 @@ export const CartItemQuantity = ({
 				disabled={quantity <= 0}
 				className="group aspect-square p-0"
 				formAction={() => formAction("DECREASE")}
+				aria-label={`Disminuir cantidad de ${productName}`}
 			>
-				<span className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-100 pb-0.5 font-bold leading-none text-black transition-colors group-hover:bg-neutral-500 group-hover:text-white">
+				<span
+					aria-hidden
+					className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-100 pb-0.5 font-bold leading-none text-black transition-colors group-hover:bg-neutral-500 group-hover:text-white"
+				>
 					–
 				</span>
 			</Button>
@@ -86,8 +92,12 @@ export const CartItemQuantity = ({
 				type="submit"
 				className="group aspect-square p-0"
 				formAction={() => formAction("INCREASE")}
+				aria-label={`Aumentar cantidad de ${productName}`}
 			>
-				<span className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-100 pb-0.5 font-bold leading-none text-black transition-colors group-hover:bg-neutral-500 group-hover:text-white">
+				<span
+					aria-hidden
+					className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-100 pb-0.5 font-bold leading-none text-black transition-colors group-hover:bg-neutral-500 group-hover:text-white"
+				>
 					+
 				</span>
 			</Button>

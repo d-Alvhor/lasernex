@@ -57,11 +57,6 @@ export const CartSummaryTable = ({ cart, locale }: { cart: Commerce.Cart; locale
 				</TableHeader>
 				<TableBody>
 					{optimisticCart.lines.map((line) => {
-						// @todo figure out what to do with this object; how to diplay it nicely
-						// do some research
-						// const _taxLine = optimisticCart.taxCalculation?.line_items?.data.find(
-						// 	(taxLine) => taxLine.product === line.product.id,
-						// );
 						return (
 							<TableRow key={line.product.id}>
 								<TableCell className="hidden sm:table-cell sm:w-24">
@@ -95,6 +90,7 @@ export const CartSummaryTable = ({ cart, locale }: { cart: Commerce.Cart; locale
 										cartId={cart.cart.id}
 										quantity={line.quantity}
 										productId={line.product.id}
+										productName={formatProductName(line.product.name, line.product.metadata.variant)}
 										onChange={dispatchOptimisticCartAction}
 									/>
 								</TableCell>
