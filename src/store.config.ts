@@ -1,14 +1,8 @@
-// Categorías reales pendientes de que Álvaro defina el catálogo final
-// (se corresponden con metadata.category en Stripe). De momento, genéricas
-// para piezas impresas en 3D — cámbialas cuando haya catálogo real.
+// Las categorías NO se configuran aquí: salen solas del metadata.category
+// de los productos activos en Stripe (ver Commerce.categoryBrowse() en
+// nav-menu.tsx, footer.tsx y sitemap.ts). Carla no necesita tocar código
+// para añadir una categoría nueva, solo escribirla en el producto.
 export const config = {
-	categories: [
-		{ name: "Figuras", slug: "figuras" },
-		{ name: "Decoración", slug: "decoracion" },
-		{ name: "Organización", slug: "organizacion" },
-		{ name: "Merchandising", slug: "merchandising" },
-	],
-
 	social: {
 		// Rellenar cuando existan perfiles reales de Lasernex
 		x: "",

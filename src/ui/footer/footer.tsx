@@ -1,7 +1,9 @@
+import { deslugify } from "@/lib/utils";
 import StoreConfig from "@/store.config";
 import { Newsletter } from "@/ui/footer/newsletter.client";
 import { ThemeToggle } from "@/ui/theme-toggle";
 import { YnsLink } from "@/ui/yns-link";
+import * as Commerce from "commerce-kit";
 
 const legalLinks = [
 	{ label: "Aviso legal", href: "/legal/aviso-legal" },
@@ -11,29 +13,28 @@ const legalLinks = [
 	{ label: "Desistimiento", href: "/legal/desistimiento" },
 ];
 
-const sections = [
-	{
-		header: "Productos",
-		links: StoreConfig.categories.map(({ name, slug }) => ({
-			label: name,
-			href: `/category/${slug}`,
-		})),
-	},
-	{
-		header: "Sobre Lasernex",
-		links: [
-			{ label: "Sobre nosotros", href: "/sobre-nosotros" },
-			{ label: "Cómo se fabrican", href: "/como-se-fabrican" },
-			{ label: "Contacto", href: `mailto:${StoreConfig.contact.email}` },
-		],
-	},
-	{
-		header: "Legal",
-		links: legalLinks,
-	},
-];
-
 export async function Footer() {
+	// Categorías en vivo desde Stripe — ver nav-menu.tsx.
+	const categories = (await Commerce.categoryBrowse()).sort((a, b) => a.localeCompare(b, "es"));
+	const sections = [
+		{
+			header: "Productos",
+			links: categories.map((slug) => ({ label: deslugify(slug), href: `/category/${slug}` })),
+		},
+		{
+			header: "Sobre Lasernex",
+			links: [
+				{ label: "Sobre nosotros", href: "/sobre-nosotros" },
+				{ label: "Cómo se fabrican", href: "/como-se-fabrican" },
+				{ label: "Contacto", href: `mailto:${StoreConfig.contact.email}` },
+			],
+		},
+		{
+			header: "Legal",
+			links: legalLinks,
+		},
+	];
+
 	return (
 		// La sala en negativo: footer en tinta (bg-primary) con texto papel.
 		<footer className="mt-8 w-full bg-primary text-primary-foreground">

@@ -1,19 +1,18 @@
-import StoreConfig from "@/store.config";
+import { deslugify } from "@/lib/utils";
 import { NavMobileMenu } from "@/ui/nav/nav-mobile-menu.client";
+import * as Commerce from "commerce-kit";
 import Link from "next/link";
 
-const links = [
-	{
-		label: "Inicio",
-		href: "/",
-	},
-	...StoreConfig.categories.map(({ name, slug }) => ({
-		label: name,
-		href: `/category/${slug}`,
-	})),
-];
+export const NavMenu = async () => {
+	// Categorías leídas en vivo de Stripe (metadata.category de los productos activos):
+	// una categoría nueva aparece sola en el menú en cuanto exista un producto con ella,
+	// sin tocar código ni redeploy.
+	const categories = (await Commerce.categoryBrowse()).sort((a, b) => a.localeCompare(b, "es"));
+	const links = [
+		{ label: "Inicio", href: "/" },
+		...categories.map((slug) => ({ label: deslugify(slug), href: `/category/${slug}` })),
+	];
 
-export const NavMenu = () => {
 	return (
 		<>
 			<div className="hidden sm:block">

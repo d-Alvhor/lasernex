@@ -1,5 +1,4 @@
 import { publicUrl } from "@/env.mjs";
-import StoreConfig from "@/store.config";
 import * as Commerce from "commerce-kit";
 import type { MetadataRoute } from "next";
 
@@ -16,10 +15,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			}) satisfies Item,
 	);
 
-	const categoryUrls = StoreConfig.categories.map(
-		(category) =>
+	// Categorías en vivo desde Stripe (metadata.category) — ver nav-menu.tsx.
+	const categories = await Commerce.categoryBrowse();
+	const categoryUrls = categories.map(
+		(slug) =>
 			({
-				url: `${publicUrl}/category/${category.slug}`,
+				url: `${publicUrl}/category/${slug}`,
 				lastModified: new Date(),
 				changeFrequency: "daily",
 				priority: 0.5,
