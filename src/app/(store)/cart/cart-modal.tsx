@@ -8,11 +8,7 @@ import Image from "next/image";
 import { CartAsideContainer } from "./cart-aside";
 
 export async function CartModalPage() {
-	// const searchParams = await props.searchParams;
-	const originalCart = await getCartFromCookiesAction();
-	// TODO fix type
-	// const cart = await Commerce.cartAddOptimistic({ add: searchParams.add, cart: originalCart! });
-	const cart = originalCart;
+	const cart = await getCartFromCookiesAction();
 
 	if (!cart || cart.lines.length === 0) {
 		return null;
@@ -92,7 +88,6 @@ export async function CartModalPage() {
 					<YnsLink href="/cart">{t("goToPaymentButton")}</YnsLink>
 				</Button>
 			</div>
-			{/* {searchParams.add && <CartModalAddSideEffect productId={searchParams.add} />} } */}
 		</CartAsideContainer>
 	);
 }

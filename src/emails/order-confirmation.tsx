@@ -35,7 +35,7 @@ export interface OrderConfirmationEmailProps {
 
 // Plantilla de confirmación de pedido — se envía desde el webhook de Stripe
 // (payment_intent.succeeded) vía Resend. Ver ARCHITECTURE.md (flujo de
-// compra) y LEGAL.md (obligación de confirmación en soporte duradero,
+// compra) y /legal/condiciones (obligación de confirmación en soporte duradero,
 // art. 98 TRLGDCU: por eso incluye enlaces a condiciones/desistimiento).
 export const OrderConfirmationEmail = ({
 	orderNumber,

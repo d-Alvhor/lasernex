@@ -49,9 +49,11 @@ export async function POST(request: Request) {
 		case "payment_intent.succeeded":
 			const metadata = cartMetadataSchema.parse(event.data.object.metadata);
 			if (metadata.taxCalculationId) {
+				// Solo se ejecuta si ENABLE_STRIPE_TAX está activo (hoy no lo está: precios
+				// IVA-incluido fijos, ver ROADMAP.md). Si se activa Stripe Tax, revisar si el
+				// payment intent id sin prefijo es referencia suficiente para la transacción fiscal.
 				await stripe.tax.transactions.createFromCalculation({
 					calculation: metadata.taxCalculationId,
-					// @todo generate better references
 					reference: event.data.object.id.slice(3),
 				});
 			}
@@ -80,8 +82,8 @@ export async function POST(request: Request) {
 				if (order && email) {
 					// receipt_email nunca se fija durante el checkout (LinkAuthenticationElement
 					// solo guarda el email en billing_details, no en el propio PaymentIntent), así
-					// que sin esto Stripe NUNCA manda su recibo automático (LEGAL.md se lo promete
-					// al cliente). Fijarlo aquí, tras el pago, SÍ dispara el envío del recibo.
+					// que sin esto Stripe NUNCA manda su recibo automático (se lo prometemos al
+					// cliente en /legal/condiciones). Fijarlo aquí, tras el pago, SÍ dispara el envío.
 					if (!order.order.receipt_email) {
 						await stripe.paymentIntents.update(event.data.object.id, { receipt_email: email });
 					}
@@ -167,7 +169,7 @@ export async function POST(request: Request) {
 		}
 
 		default:
-			console.log(`Unhandled event type: ${event.type}`);
+			console.warn(`Unhandled event type: ${event.type}`);
 	}
 	return Response.json({ received: true });
 }
