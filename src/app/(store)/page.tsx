@@ -16,8 +16,10 @@ export default async function Home() {
 
 	return (
 		<>
-			{/* ── Hero editorial "Sala Blanca": sobre el papel cálido de la página, sin caja ── */}
-			<section className="relative overflow-hidden border-b border-border">
+			{/* ── Hero editorial "Sala Blanca": a sangre completa (fondo full-bleed),
+			    texto centrado en la misma anchura que el resto de la página.
+			    Sigue dentro del único <main> del layout — no crea un segundo landmark. ── */}
+			<section className="relative left-1/2 w-screen -ml-[50vw] overflow-hidden border-b border-border">
 				{/* Arte generativo: dígito 7 gigante en el tercio derecho sobre textura de línea de capa */}
 				<div aria-hidden className="pointer-events-none absolute inset-0">
 					<div className="layer-lines absolute inset-0 opacity-40" />
@@ -26,7 +28,7 @@ export default async function Home() {
 					</span>
 				</div>
 
-				<div className="relative flex min-h-[54vh] flex-col justify-center py-16 md:py-20">
+				<div className="relative mx-auto flex min-h-[54vh] max-w-7xl flex-col justify-center px-4 py-16 sm:px-6 md:py-20 lg:px-8">
 					<p className="font-sans text-[11px] font-medium uppercase tracking-[0.28em] text-muted-foreground">
 						Lasernex · Fabricación aditiva bajo demanda
 					</p>
