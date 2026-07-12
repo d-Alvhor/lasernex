@@ -1,15 +1,39 @@
-# CLAUDE.md — Lasernex
+# CLAUDE.md — Lasernex · **fichero canónico de agentes**
 
-> Tienda online de piezas impresas en 3D · **lasernex.es** · Repo privado `d-Alvhor/lasernex`
-> Este fichero es la doctrina del proyecto. Fue escrito por Fable 5 en Fase 0 para que CUALQUIER modelo (Sonnet incluido) continúe con el mismo criterio. Si dudas entre tu intuición y este fichero: **gana este fichero**.
+> Tienda online de piezas impresas en 3D · **lasernex.es** · Repo **público** `d-Alvhor/lasernex` (AGPL-3.0, §13).
+> Esta es la doctrina del proyecto. La escribió Fable 5 en Fase 0 y la mantiene vitaminada para que **CUALQUIER agente** —Claude, Codex, Gemini, Cursor, Copilot, un humano— continúe con el mismo criterio. Si dudas entre tu intuición y este fichero: **gana este fichero**.
 
-## 🔥 ORDEN PERMANENTE (grabada a fuego)
+## 📎 Un solo cerebro para todos los agentes
 
-**Lo PRIMERO en cada sesión y ante cada tarea: `superpowers:using-superpowers`.** Busca la skill adecuada e invócala ANTES de responder o actuar (brainstorming antes de crear, systematic-debugging ante cualquier bug, TDD antes de implementar, verification-before-completion antes de decir "hecho", writing-plans ante specs multi-paso). Si hay un 1% de probabilidad de que una skill aplique, se invoca. No improvises lo que una skill ya resuelve.
+Este fichero es la **fuente única de instrucciones**. Los demás formatos de agente son **enlaces simbólicos** a él, no copias — se editan aquí y solo aquí:
 
-## Los 7 documentos son la fuente de verdad
+| Fichero | Lo lee | Es |
+|---|---|---|
+| `CLAUDE.md` | Claude Code / Claude en IDE | **canónico (este)** |
+| `AGENTS.md` | Codex, Cursor, Aider, Jules, Zed… (estándar abierto) | symlink → `CLAUDE.md` |
+| `GEMINI.md` | Gemini CLI | symlink → `CLAUDE.md` |
 
-Fase 0 produjo 7 documentos que **gobiernan el proyecto**. Antes de tocar código, lee el que aplique; si el código contradice al documento, o se corrige el código o se actualiza el documento con un ADR — nunca se deja divergir en silencio:
+Si editas la doctrina, edita `CLAUDE.md`. Nunca dupliques su contenido en otro sitio: la réplica silenciosa es deuda. (En Windows o con `core.symlinks=false` un symlink se ve como un fichero de una línea con la ruta destino; en Mac/Linux se resuelve solo.)
+
+## 🚀 Protocolo de arranque (30 segundos, haz esto ANTES de nada)
+
+1. **Activa tu sistema de skills/procedimientos.** Si eres Claude Code: invoca `superpowers:using-superpowers` lo PRIMERO. Si eres Codex o Gemini: las skills de Superpowers también cargan en tu entorno (Codex nativo; Gemini vía `activate_skill`) — úsalas igual. Sea cual sea tu runtime, la regla es la misma: **busca el procedimiento adecuado y aplícalo antes de responder o actuar**. Si hay un 1 % de probabilidad de que una skill/procedimiento aplique, se usa.
+2. **Lee el documento de gobierno que aplique** a tu tarea (tabla abajo) antes de tocar código.
+3. **Interioriza las 7 reglas duras.** Violar una = trabajo rechazado.
+4. **Verifica contra la realidad, no contra tu memoria** (API, versión, repo, estado de Stripe/Vercel): `gh api`, `context7`, docs oficiales. Si no puedes comprobarlo, dilo; **no inventes**.
+5. **Trabaja por fases y con evidencia.** Nada es "hecho" sin ejecutar la verificación y enseñar su salida.
+
+### 🚩 Antipatrones (si te descubres pensando esto, PARA)
+- "Monto una base de datos / login / panel de admin para mejorarlo" → **vetado** (regla 2). La gestión es el Dashboard de Stripe.
+- "Reescribo el checkout / lo mando a checkout.stripe.com" → **no**, es Elements embebido a propósito (regla 7, ADR-002).
+- "Acepto el precio que manda el cliente" → **nunca** (regla 3): el precio se valida contra Stripe.
+- "Escribo texto de UI en inglés y ya lo traduzco" → **no**, es-ES desde el primer carácter (regla 6).
+- "Creo que la API funciona así" sin comprobarlo → **verifica** (lección fundacional, abajo).
+- "Digo que está hecho porque debería funcionar" → **enseña la salida** de build/test/curl primero.
+
+## Los documentos de gobierno son la fuente de verdad
+
+Fase 0 produjo los documentos que **gobiernan el proyecto**. Antes de tocar código, lee el que aplique; si el código contradice al documento, o se corrige el código o se actualiza el documento con un ADR — **nunca se deja divergir en silencio**:
 
 | Documento | Gobierna |
 |---|---|
@@ -20,7 +44,8 @@ Fase 0 produjo 7 documentos que **gobiernan el proyecto**. Antes de tocar códig
 | `LEGAL.md` | Textos legales base (GDPR/LSSI/TRLGDCU) — no lanzar sin revisión de asesor |
 | `OPERATIONS.md` | Manual de la dueña — si un cambio altera cómo opera ella, actualizar este doc EN EL MISMO PR |
 | `ROADMAP.md` | MVP 4 semanas, fase 2 y **anti-roadmap** (lo vetado) |
-| `DEPLOY.md` | Guía paso a paso para el primer deploy en Vercel (bloqueado en Fase 1 por permisos del token) |
+| `DEPLOY.md` | Guía paso a paso del deploy en Vercel |
+| `docs/superpowers/specs/` · `docs/superpowers/plans/` | Specs y planes de implementación aprobados (p. ej. el molde replicable) |
 
 ## Reglas duras (violarlas = PR rechazado)
 
@@ -34,30 +59,31 @@ Fase 0 produjo 7 documentos que **gobiernan el proyecto**. Antes de tocar códig
 
 ## Cómo pensar aquí (el criterio de Fable 5)
 
-- **Verifica contra la realidad antes de afirmar.** La lección fundacional del proyecto: el repo base `yournextstore` había pivotado a una plataforma SaaS y el plan original era inviable tal cual — se descubrió consultando el repo REAL (gh api), no la memoria del modelo. Ante cualquier duda sobre una API, versión o repo: compruébalo (gh api, context7, docs oficiales). Si no puedes comprobarlo, dilo y pide el código actual; **no inventes**.
+- **Verifica contra la realidad antes de afirmar.** La lección fundacional del proyecto: el repo base `yournextstore` había pivotado a una plataforma SaaS y el plan original era inviable tal cual — se descubrió consultando el repo REAL (`gh api`), no la memoria del modelo. Ante cualquier duda sobre una API, versión o repo: compruébalo (`gh api`, context7, docs oficiales). Si no puedes comprobarlo, dilo y pide el código actual; **no inventes**.
 - **Cambio mínimo que resuelve.** Este proyecto vive de NO tener piezas. Cada dependencia nueva, ruta API nueva o estado nuevo necesita justificarse contra los ADRs. La pregunta antes de construir: "¿Stripe ya hace esto solo?"
 - **La dueña no es técnica.** Cada decisión se evalúa también con la pregunta: "¿esto lo puede operar ella sola desde el Dashboard de Stripe?" Si no, o se simplifica o se documenta en `OPERATIONS.md` en lenguaje llano (sin jerga, paso a paso).
 - **Evidencia antes de 'hecho'.** No se declara nada terminado sin ejecutar la verificación (build, test, curl de cabeceras, compra de prueba…) y enseñar la salida. Si un test falla, se dice con su output. (skill: verification-before-completion)
 - **Trabajo por FASES con confirmación.** Al cerrar una fase: resumen de lo hecho + decisiones pendientes + ESPERAR confirmación de Álvaro. No arrancar la fase siguiente por iniciativa propia. Estado actual al final de este fichero.
-- **Al cerrar fase o sesión**: usa `/sync-state` si aplica, commitea con mensajes `docs:`/`feat:`/`fix:` descriptivos en español y pushea a `main` (o rama si el cambio es grande).
+- **Al cerrar fase o sesión**: usa `/sync-state` si aplica, commitea con mensajes `docs:`/`feat:`/`fix:` descriptivos en español y pushea a `main` (o rama si el cambio es grande). Cuerpo de commit ≤100 caracteres por línea; termina con `Co-Authored-By`.
 
 ## Datos del proyecto
 
-- **Base de código**: fork lógico de `yournextstore/yournextstore` en el commit **`a98a19f`** (ene-2025, el último "pure-Stripe": Next 15 + `stripe@17` + `STRIPE_SECRET_KEY`). Decisión: ADR-004. El `main` actual de YNS usa su SaaS (`YNS_API_KEY`) y NO nos sirve. En Fase 1 se trae ese árbol a este repo y se actualizan deps (Next 16 estable, React 19 estable, stripe/Tailwind al día).
-- **Stack**: Next.js App Router + TypeScript estricto + Tailwind · Stripe (Elements embebido/PaymentIntent — ver ADR-002, Products/Prices, Tax/IVA incluido, Invoicing, webhooks) · Resend (emails de marca, React Email) · Vercel free tier.
-- **Marca**: Lasernex — logo "7L" en círculo negro, estética minimalista en negro/blanco/grises (assets los pasa Álvaro en Fase 2). Dominio: lasernex.es.
+- **Base de código**: fork lógico de `yournextstore/yournextstore` en el commit **`a98a19f`** (ene-2025, el último "pure-Stripe": Next 15 + `stripe@17` + `STRIPE_SECRET_KEY`). Decisión: ADR-004. El `main` actual de YNS usa su SaaS (`YNS_API_KEY`) y NO nos sirve. `commerce-kit` está **clavado en 0.0.39** (ADR-006): desde ~0.10.0 depende del SaaS de YNS. No hay upstream del que traer mejoras: el mantenimiento (parches de seguridad de Next/React/stripe) recae en este árbol.
+- **Stack**: Next.js 16 App Router + TypeScript estricto (5.9.3) + Tailwind 4 · Stripe vía `commerce-kit@0.0.39` (Elements embebido/PaymentIntent — ver ADR-002, Products/Prices, Tax/IVA incluido, Invoicing, webhooks) · Resend (emails de marca, React Email) · Vercel free tier. Gestor: **bun**. Lint: **biome**. Tests: **vitest**.
+- **Marca**: Lasernex — logo "7L" en círculo negro, estética minimalista. Dominio: lasernex.es. Diseño actual **"Sala Blanca"** (Fraunces + Hanken Grotesk, papel cálido, tema claro/oscuro, `ProductPlacard` generativo) — tokens en `globals.css`, fuentes en `fonts.ts`. **No revertir** a la estética shadcn azulada anterior.
 - **Mercado**: España. IVA 21% con **precios IVA-incluido**. GDPR/LSSI/TRLGDCU (ver LEGAL.md). Desistimiento 14 días (excepto personalizados). <100 pedidos/mes.
 - **Idioma de trabajo con Álvaro**: español. Código con comentarios breves y solo donde aportan.
 
 ## Estado del proyecto
 
-(Actualizado 2026-07-11 — la tienda ya está **EN VIVO cobrando con dinero real**. Todo en `main` y desplegado.)
+(Actualizado 2026-07-12 — la tienda está **EN VIVO cobrando con dinero real**. Todo en `main` y desplegado.)
 
 - ✅ **FASE 0-3** completas y en `main`.
 - ✅ **DEPLOY EN VIVO**: la tienda funciona en **https://lasernex.vercel.app** (**Stripe en modo REAL/LIVE — cobra dinero de verdad**). Proyecto Vercel `lasernex` vinculado a GitHub → auto-deploy en cada push a `main`. Dominio `lasernex.es` comprado en **Dinahosting**, añadido y verificado en Vercel — falta solo cambiar el registro DNS de `www` (ver `DEPLOY.md`).
 - ✅ **PAGOS REALES ACTIVADOS** (2026-07-11): claves `pk_live`/`sk_live` en Vercel **solo en producción** (preview queda sin claves = seguro, sin cobros de prueba accidentales). Webhook LIVE `we_1Ts7lX…` → `/api/stripe-webhook` (eventos `payment_intent.succeeded`, `product.created/updated`) con su secreto en Vercel. Tarifa de envío LIVE `shr_1Ts7lM…` (Envío estándar península, 4,90 € IVA incl., 3-5 días). Verificado: la web sirve `pk_live` y lee el catálogo real (vacío). **El catálogo LIVE está vacío a propósito: Carla lo mete de cero en Modo real** (aviso en `OPERATIONS.md §1`). Falta la prueba humana: 1 compra real con tarjeta real.
 - ✅ **LICENCIA AGPL-3.0** (ADR-007, decidido). Repo **PÚBLICO** + aviso en footer = cumplimiento §13, gratis.
-- ✅ **DISEÑO "SALA BLANCA"**: front rehecho por completo (Fraunces + Hanken Grotesk, papel cálido, tema claro/oscuro, `ProductPlacard` generativo sin fotos, hero editorial, ficha técnica honesta, favicon 7L). **Esta es la base actual — no revertir a la estética shadcn azulada anterior.** El sistema de diseño vive en `globals.css` (tokens HSL) + `fonts.ts`.
+- ✅ **DISEÑO "SALA BLANCA"**: front rehecho por completo (ver Datos del proyecto). El sistema de diseño vive en `globals.css` (tokens HSL) + `fonts.ts`.
+- 🟢 **MOLDE REPLICABLE** (en curso, 2026-07-12): spec aprobada en `docs/superpowers/specs/2026-07-11-molde-plantilla-tiendas-design.md` para convertir esta tienda en la plantilla-madre `d-Alvhor/molde` (repo privado) desde la que montar tiendas nuevas en 1-2 h, con manual de la dueña y gate `comprobar-tienda`. Plan A en redacción.
 - 🟡 **FASE 4** parcial: cabeceras seguridad + accesibilidad OK. Lighthouse no corre en este entorno (Chrome crashea al iniciar Tracing — no es bug del código; usar PageSpeed Insights contra producción).
 
 ### Bloqueos reales que quedan (necesitan a Álvaro/Carla, no son técnicos)
