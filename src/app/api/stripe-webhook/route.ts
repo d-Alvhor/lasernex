@@ -1,6 +1,7 @@
 import { env } from "@/env.mjs";
-import { sendOrderConfirmationEmail } from "@/lib/email/resend";
+import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from "@/lib/email/resend";
 import { formatMoney, unpackPromise } from "@/lib/utils";
+import config from "@/store.config";
 import * as Commerce from "commerce-kit";
 import { cartMetadataSchema } from "commerce-kit/internal";
 import { revalidateTag } from "next/cache";
@@ -86,32 +87,53 @@ export async function POST(request: Request) {
 					}
 
 					const currency = order.order.currency;
+					const customerName =
+						order.order.shipping?.name ?? order.order.latest_charge?.billing_details?.name ?? "";
+					const lines = order.lines
+						.filter((line) => line.product)
+						.map((line) => ({
+							name: line.product!.name,
+							quantity: line.quantity,
+							unitAmountFormatted: formatMoney({
+								amount: (line.product!.default_price.unit_amount ?? 0) * line.quantity,
+								currency,
+								locale: "es-ES",
+							}),
+						}));
+					const totalFormatted = formatMoney({ amount: order.order.amount, currency, locale: "es-ES" });
+					const shippingAddress = order.order.shipping?.address
+						? {
+								line1: order.order.shipping.address.line1,
+								line2: order.order.shipping.address.line2,
+								city: order.order.shipping.address.city,
+								postalCode: order.order.shipping.address.postal_code,
+								country: order.order.shipping.address.country,
+							}
+						: null;
+
 					await sendOrderConfirmationEmail(email, {
 						orderNumber: order.order.id,
-						customerName:
-							order.order.shipping?.name ?? order.order.latest_charge?.billing_details?.name ?? "",
-						lines: order.lines
-							.filter((line) => line.product)
-							.map((line) => ({
-								name: line.product!.name,
-								quantity: line.quantity,
-								unitAmountFormatted: formatMoney({
-									amount: (line.product!.default_price.unit_amount ?? 0) * line.quantity,
-									currency,
-									locale: "es-ES",
-								}),
-							})),
-						totalFormatted: formatMoney({ amount: order.order.amount, currency, locale: "es-ES" }),
-						shippingAddress: order.order.shipping?.address
-							? {
-									line1: order.order.shipping.address.line1,
-									line2: order.order.shipping.address.line2,
-									city: order.order.shipping.address.city,
-									postalCode: order.order.shipping.address.postal_code,
-									country: order.order.shipping.address.country,
-								}
-							: null,
+						customerName,
+						lines,
+						totalFormatted,
+						shippingAddress,
 					});
+
+					// El enlace lleva SHIP_NOTIFICATION_SECRET en claro: este email va SOLO
+					// a config.contact.email (Carla), nunca al cliente ni a ninguna
+					// superficie pública.
+					if (env.SHIP_NOTIFICATION_SECRET) {
+						await sendOrderNotificationEmail(config.contact.email, {
+							orderNumber: order.order.id,
+							customerName,
+							lines,
+							totalFormatted,
+							shippingAddress,
+							shipToken: env.SHIP_NOTIFICATION_SECRET,
+						});
+					} else {
+						console.warn("SHIP_NOTIFICATION_SECRET no configurado: email interno de nuevo pedido NO enviado");
+					}
 				} else {
 					console.warn("No se pudo enviar email de confirmación: pedido o email no encontrados", {
 						paymentIntentId: event.data.object.id,

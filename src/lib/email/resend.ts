@@ -1,4 +1,8 @@
 import { OrderConfirmationEmail, type OrderConfirmationEmailProps } from "@/emails/order-confirmation";
+import {
+	OrderNotificationInternalEmail,
+	type OrderNotificationInternalEmailProps,
+} from "@/emails/order-notification-internal";
 import { OrderShippedEmail, type OrderShippedEmailProps } from "@/emails/order-shipped";
 import { env, publicUrl } from "@/env.mjs";
 import { Resend } from "resend";
@@ -34,6 +38,29 @@ export const sendOrderConfirmationEmail = async (
 			react: OrderConfirmationEmail({ ...props, storeUrl: publicUrl }),
 		},
 		{ idempotencyKey: `order-confirmation-${props.orderNumber}` },
+	);
+};
+
+// Va SOLO a Carla (config.contact.email, resuelto por el llamador en el
+// webhook), nunca al cliente: el enlace lleva SHIP_NOTIFICATION_SECRET en claro.
+export const sendOrderNotificationEmail = async (
+	to: string,
+	props: Omit<OrderNotificationInternalEmailProps, "storeUrl">,
+) => {
+	const resend = getResendClient();
+	if (!resend) {
+		console.warn("RESEND_API_KEY no configurada: email interno de nuevo pedido NO enviado");
+		return { skipped: true as const };
+	}
+
+	return resend.emails.send(
+		{
+			from: env.RESEND_FROM_EMAIL,
+			to,
+			subject: `Nuevo pedido en Lasernex — nº ${props.orderNumber}`,
+			react: OrderNotificationInternalEmail({ ...props, storeUrl: publicUrl }),
+		},
+		{ idempotencyKey: `order-notification-${props.orderNumber}` },
 	);
 };
 
