@@ -52,7 +52,8 @@ export const PersonalizedAddToCart = ({
 			</div>
 			<AddToCartButton
 				productId={productId}
-				disabled={disabled || trimmed.length === 0}
+				disabled={disabled}
+				blockSubmit={trimmed.length === 0}
 				personalization={trimmed}
 			/>
 		</div>

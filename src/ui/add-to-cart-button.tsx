@@ -12,15 +12,19 @@ export const AddToCartButton = ({
 	disabled,
 	className,
 	personalization,
+	blockSubmit,
 }: {
 	productId: string;
 	disabled?: boolean;
 	className?: string;
 	personalization?: string;
+	/** Bloquea el envío (p.ej. falta texto de personalización) sin cambiar el
+	 * texto del botón a "Agotado" — eso es solo para disabled (sin stock). */
+	blockSubmit?: boolean;
 }) => {
 	const t = useTranslations("Global.addToCart");
 	const [pending, startTransition] = useTransition();
-	const isDisabled = disabled || pending;
+	const isDisabled = disabled || blockSubmit || pending;
 	const { setOpen } = useCartModal();
 
 	return (
