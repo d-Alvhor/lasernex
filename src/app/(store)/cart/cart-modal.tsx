@@ -31,40 +31,46 @@ export async function CartModalPage() {
 
 				<div className="mt-8">
 					<ul role="list" className="-my-6 divide-y divide-neutral-200">
-						{cart.lines.map((line) => (
-							<li
-								key={line.product.id}
-								className="grid grid-cols-[4rem_1fr_max-content] grid-rows-[auto_auto] gap-x-4 gap-y-2 py-6"
-							>
-								{line.product.images[0] ? (
-									<div className="col-span-1 row-span-2 bg-neutral-100">
-										<Image
-											className="aspect-square rounded-md object-cover"
-											src={line.product.images[0]}
-											width={80}
-											height={80}
-											alt=""
-										/>
-									</div>
-								) : (
-									<div className="col-span-1 row-span-2" />
-								)}
+						{cart.lines.map((line) => {
+							const personalization = cart.cart.metadata[`personalization_${line.product.id}`];
+							return (
+								<li
+									key={line.product.id}
+									className="grid grid-cols-[4rem_1fr_max-content] grid-rows-[auto_auto] gap-x-4 gap-y-2 py-6"
+								>
+									{line.product.images[0] ? (
+										<div className="col-span-1 row-span-2 bg-neutral-100">
+											<Image
+												className="aspect-square rounded-md object-cover"
+												src={line.product.images[0]}
+												width={80}
+												height={80}
+												alt=""
+											/>
+										</div>
+									) : (
+										<div className="col-span-1 row-span-2" />
+									)}
 
-								<h3 className="-mt-1 font-semibold leading-tight">
-									{formatProductName(line.product.name, line.product.metadata.variant)}
-								</h3>
-								<p className="text-sm font-medium leading-none">
-									{formatMoney({
-										amount: line.product.default_price.unit_amount ?? 0,
-										currency: line.product.default_price.currency,
-										locale,
-									})}
-								</p>
-								<p className="self-end text-sm font-medium text-muted-foreground">
-									{t("quantity", { quantity: line.quantity })}
-								</p>
-							</li>
-						))}
+									<h3 className="-mt-1 font-semibold leading-tight">
+										{formatProductName(line.product.name, line.product.metadata.variant)}
+									</h3>
+									<p className="text-sm font-medium leading-none">
+										{formatMoney({
+											amount: line.product.default_price.unit_amount ?? 0,
+											currency: line.product.default_price.currency,
+											locale,
+										})}
+									</p>
+									{personalization && (
+										<p className="text-xs text-muted-foreground">Personalización: {personalization}</p>
+									)}
+									<p className="self-end text-sm font-medium text-muted-foreground">
+										{t("quantity", { quantity: line.quantity })}
+									</p>
+								</li>
+							);
+						})}
 					</ul>
 				</div>
 			</div>

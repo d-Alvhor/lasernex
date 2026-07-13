@@ -57,6 +57,7 @@ export const CartSummaryTable = ({ cart, locale }: { cart: Commerce.Cart; locale
 				</TableHeader>
 				<TableBody>
 					{optimisticCart.lines.map((line) => {
+						const personalization = cart.cart.metadata[`personalization_${line.product.id}`];
 						return (
 							<TableRow key={line.product.id}>
 								<TableCell className="hidden sm:table-cell sm:w-24">
@@ -77,6 +78,11 @@ export const CartSummaryTable = ({ cart, locale }: { cart: Commerce.Cart; locale
 									>
 										{formatProductName(line.product.name, line.product.metadata.variant)}
 									</YnsLink>
+									{personalization && (
+										<p className="mt-0.5 text-xs font-normal text-muted-foreground">
+											Personalización: {personalization}
+										</p>
+									)}
 								</TableCell>
 								<TableCell>
 									{formatMoney({
@@ -86,13 +92,17 @@ export const CartSummaryTable = ({ cart, locale }: { cart: Commerce.Cart; locale
 									})}
 								</TableCell>
 								<TableCell>
-									<CartItemQuantity
-										cartId={cart.cart.id}
-										quantity={line.quantity}
-										productId={line.product.id}
-										productName={formatProductName(line.product.name, line.product.metadata.variant)}
-										onChange={dispatchOptimisticCartAction}
-									/>
+									{personalization ? (
+										<span className="inline-block min-w-8 px-1 text-center text-sm tabular-nums">1</span>
+									) : (
+										<CartItemQuantity
+											cartId={cart.cart.id}
+											quantity={line.quantity}
+											productId={line.product.id}
+											productName={formatProductName(line.product.name, line.product.metadata.variant)}
+											onChange={dispatchOptimisticCartAction}
+										/>
+									)}
 								</TableCell>
 								<TableCell className="text-right">
 									<CartItemLineTotal

@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { MainProductImage } from "@/ui/products/main-product-image";
+import { PERSONALIZATION_INPUT_ID } from "@/ui/products/personalized-add-to-cart";
 import type * as Commerce from "commerce-kit";
 import { formatMoney } from "commerce-kit/currencies";
 import { AddToCartButton } from "./add-to-cart-button";
@@ -8,7 +9,15 @@ export const ProductBottomStickyCard = ({
 	product,
 	locale,
 	show,
-}: { product: Commerce.MappedProduct; locale: string; show: boolean }) => {
+	personalizationLabel,
+	alreadyPersonalizedInCart,
+}: {
+	product: Commerce.MappedProduct;
+	locale: string;
+	show: boolean;
+	personalizationLabel?: string | null;
+	alreadyPersonalizedInCart?: boolean;
+}) => {
 	return (
 		<div
 			tabIndex={show ? 0 : -1}
@@ -49,11 +58,20 @@ export const ProductBottomStickyCard = ({
 					</div>
 				</div>
 
-				<AddToCartButton
-					productId={product.id}
-					disabled={product.metadata.stock <= 0}
-					className="px-3 text-sm sm:text-lg sm:px-8 shrink-0 h-9 sm:h-10"
-				/>
+				{personalizationLabel && !alreadyPersonalizedInCart ? (
+					<a
+						href={`#${PERSONALIZATION_INPUT_ID}`}
+						className="link-wipe shrink-0 font-sans text-sm font-medium text-foreground sm:text-base"
+					>
+						Personalizar ↑
+					</a>
+				) : personalizationLabel ? null : (
+					<AddToCartButton
+						productId={product.id}
+						disabled={product.metadata.stock <= 0}
+						className="px-3 text-sm sm:text-lg sm:px-8 shrink-0 h-9 sm:h-10"
+					/>
+				)}
 			</div>
 		</div>
 	);

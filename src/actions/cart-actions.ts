@@ -64,12 +64,23 @@ export async function addToCartAction(formData: FormData) {
 	if (!productId || typeof productId !== "string") {
 		throw new Error("Invalid product ID");
 	}
+	const personalization = formData.get("personalization");
 
 	const cart = await getCartFromCookiesAction();
 
 	const updatedCart = await Commerce.cartAdd({ productId, cartId: cart?.cart.id });
 
 	if (updatedCart) {
+		// Texto de personalización (grabado/nombre) para productos que lo piden —
+		// se guarda como metadata aparte, NUNCA en la clave `prod_...` que usa el
+		// contador de cantidad (ver ADR de personalización en OPERATIONS.md).
+		if (personalization && typeof personalization === "string") {
+			await Commerce.updatePaymentIntent({
+				paymentIntentId: updatedCart.id,
+				data: { metadata: { [`personalization_${productId}`]: personalization.slice(0, 40) } },
+			});
+		}
+
 		await setCartCookieJson({
 			id: updatedCart.id,
 			linesCount: Commerce.cartCount(updatedCart.metadata),

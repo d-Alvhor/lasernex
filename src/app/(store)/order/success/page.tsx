@@ -66,6 +66,11 @@ export default async function OrderDetailsPage(props: {
 							<h3 className="row-start-1 font-semibold leading-none text-neutral-700">
 								{formatProductName(line.product.name, line.product.metadata.variant)}
 							</h3>
+							{order.order.metadata[`personalization_${line.product.id}`] && (
+								<p className="row-start-1 mt-6 text-sm text-muted-foreground">
+									Personalización: {order.order.metadata[`personalization_${line.product.id}`]}
+								</p>
+							)}
 							{line.product.images[0] && (
 								<Image
 									className="col-start-1 row-span-3 row-start-1 mt-0.5 w-16 rounded-lg object-cover object-center transition-opacity sm:mt-0 sm:w-32"

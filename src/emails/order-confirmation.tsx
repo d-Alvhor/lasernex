@@ -16,6 +16,7 @@ export interface OrderConfirmationLine {
 	name: string;
 	quantity: number;
 	unitAmountFormatted: string;
+	personalization?: string | null;
 }
 
 export interface OrderConfirmationEmailProps {
@@ -77,6 +78,11 @@ export const OrderConfirmationEmail = ({
 								<Text style={{ margin: 0 }}>
 									{line.name} × {line.quantity}
 								</Text>
+								{line.personalization && (
+									<Text style={{ margin: 0, fontSize: "13px", color: "#737373" }}>
+										Personalización: {line.personalization}
+									</Text>
+								)}
 							</Column>
 							<Column align="right">
 								<Text style={{ margin: 0 }}>{line.unitAmountFormatted}</Text>

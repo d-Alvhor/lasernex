@@ -16,6 +16,7 @@ export interface OrderNotificationInternalLine {
 	name: string;
 	quantity: number;
 	unitAmountFormatted: string;
+	personalization?: string | null;
 }
 
 export interface OrderNotificationInternalEmailProps {
@@ -80,6 +81,11 @@ export const OrderNotificationInternalEmail = ({
 								<Text style={{ margin: 0 }}>
 									{line.name} × {line.quantity}
 								</Text>
+								{line.personalization && (
+									<Text style={{ margin: 0, fontWeight: "bold", color: "#111111" }}>
+										✏️ Personalización: {line.personalization}
+									</Text>
+								)}
 							</Column>
 							<Column align="right">
 								<Text style={{ margin: 0 }}>{line.unitAmountFormatted}</Text>

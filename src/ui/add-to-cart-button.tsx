@@ -11,10 +11,12 @@ export const AddToCartButton = ({
 	productId,
 	disabled,
 	className,
+	personalization,
 }: {
 	productId: string;
 	disabled?: boolean;
 	className?: string;
+	personalization?: string;
 }) => {
 	const t = useTranslations("Global.addToCart");
 	const [pending, startTransition] = useTransition();
@@ -38,6 +40,9 @@ export const AddToCartButton = ({
 				startTransition(async () => {
 					const formData = new FormData();
 					formData.append("productId", productId);
+					if (personalization) {
+						formData.append("personalization", personalization);
+					}
 					await addToCartAction(formData);
 				});
 			}}

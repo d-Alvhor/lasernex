@@ -18,6 +18,7 @@
    - **Imágenes**: sube las fotos. ⚠️ **La primera foto es la principal** (la que sale en el catálogo y cuando alguien comparte el enlace): usa una buena, en horizontal si puedes, de al menos 1200 px de ancho.
 4. En **Precio**: pon el precio **con IVA incluido** (lo que paga el cliente, ej. 24,90 €), moneda **EUR**, tipo **Único** (no recurrente).
 5. Si el producto tiene **variantes** (color, tamaño): de momento, la forma sencilla es crear **un precio por variante** o **un producto por variante** ("Maceta 12 cm — Blanca", "Maceta 12 cm — Negra"). Te dejaremos montado un ejemplo para copiar.
+5.b **Si el producto se personaliza con un nombre/texto** (una taza grabada, una figura con un nombre, etc.): baja hasta la sección **Metadatos** (Metadata) del formulario del producto → **+ Añadir metadato** → en **Clave** pon exactamente `preview` (todo en minúsculas, sin espacios) → en **Valor** escribe el texto que verá el cliente encima del campo, por ejemplo `Nombre para grabar` o `¿Qué texto quieres en la pieza?`. Guarda. En la web aparecerá un cuadro de texto obligatorio antes de "Añadir al carrito" con esa misma frase, y el cliente no podrá comprarlo sin rellenarlo. Si el producto NO se personaliza, simplemente no añadas ese metadato.
 6. Guarda. **Normalmente aparece en la web en segundos, solo.** En algún caso raro (sobre todo justo al crear un producto muy nuevo) su ficha individual puede tardar un par de minutos aunque ya salga en el catálogo — si tarda más, abre este enlace guardado en marcadores para forzar el refresco:
 
    ```
@@ -38,8 +39,9 @@ Te llegarán **dos emails** por cada venta: uno de **Stripe** avisando del pago,
 
 1. En **dashboard.stripe.com → Pagos** ves todos los pedidos: quién compró, qué, cuánto y su **dirección de envío**.
 2. Haz clic en el pago para ver el detalle completo (productos, dirección, email del cliente).
-3. Fabrica/prepara el paquete y envíalo por mensajería.
-4. Cuando lo envíes, abre el email **"Nuevo pedido"** de esa venta y pulsa **"Marcar como enviado"**. Eso dispara al cliente el email de "tu pedido ya va de camino".
+3. **Si el producto era personalizado**: el texto que escribió el cliente aparece destacado con ✏️ en el email "Nuevo pedido" (justo debajo del nombre del producto), y también en el propio pago dentro de Stripe, bajando hasta la sección **Metadatos** del pago (busca una clave que empieza por `personalization_`). Revísalo antes de fabricar la pieza.
+4. Fabrica/prepara el paquete y envíalo por mensajería.
+5. Cuando lo envíes, abre el email **"Nuevo pedido"** de esa venta y pulsa **"Marcar como enviado"**. Eso dispara al cliente el email de "tu pedido ya va de camino".
 
    **Para añadir el número de seguimiento** (opcional): antes de pulsar, puedes editar esa URL y añadir al final `&tracking=1234567890` (el número tal cual) y `&trackingUrl=https://...` (el enlace de seguimiento de la mensajería). Si pones `trackingUrl`, el cliente recibe un enlace clicable "Seguir el envío" en su email; con solo `tracking` ve el número, sin enlace.
 

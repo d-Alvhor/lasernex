@@ -1,3 +1,4 @@
+import { getCartFromCookiesAction } from "@/actions/cart-actions";
 import { ProductImageModal } from "@/app/(store)/product/[slug]/product-image-modal";
 import {
 	Breadcrumb,
@@ -14,6 +15,7 @@ import { AddToCartButton } from "@/ui/add-to-cart-button";
 import { JsonLd, mappedProductToJsonLd } from "@/ui/json-ld";
 import { Markdown } from "@/ui/markdown";
 import { MainProductImage } from "@/ui/products/main-product-image";
+import { PersonalizedAddToCart } from "@/ui/products/personalized-add-to-cart";
 import { ProductPlacard } from "@/ui/products/product-placard";
 import { StickyBottom } from "@/ui/sticky-bottom";
 import { YnsLink } from "@/ui/yns-link";
@@ -80,6 +82,18 @@ export default async function SingleProductPage(props: {
 	const category = product.metadata.category;
 	const images = product.images;
 	const measure = extractMeasure(product.name);
+
+	// Personalización (nombre para grabar, etc.): reutiliza metadata.preview
+	// como etiqueta, ver OPERATIONS.md. Cantidad fija a 1 por texto — si ya
+	// hay una unidad en el carrito, no se puede añadir otra con un texto
+	// distinto sin terminar antes ese pedido (mismo patrón que Etsy).
+	const personalizationLabel = product.metadata.preview || null;
+	let alreadyPersonalizedInCart = false;
+	if (personalizationLabel) {
+		const cart = await getCartFromCookiesAction();
+		const existingLine = cart?.lines.find((line) => line.product.id === product.id);
+		alreadyPersonalizedInCart = Boolean(existingLine && existingLine.quantity > 0);
+	}
 	const priceFormatted = product.default_price.unit_amount
 		? formatMoney({
 				amount: product.default_price.unit_amount,
@@ -122,7 +136,12 @@ export default async function SingleProductPage(props: {
 				</BreadcrumbList>
 			</Breadcrumb>
 
-			<StickyBottom product={product} locale={locale}>
+			<StickyBottom
+				product={product}
+				locale={locale}
+				personalizationLabel={personalizationLabel}
+				alreadyPersonalizedInCart={alreadyPersonalizedInCart}
+			>
 				<div className="mt-6 grid gap-10 lg:grid-cols-[1.1fr_1fr]">
 					{/* IZQUIERDA — visual: fotos si existen, si no la placa generativa XL */}
 					<div className="lg:sticky lg:top-24 lg:self-start">
@@ -211,7 +230,25 @@ export default async function SingleProductPage(props: {
 						{product.metadata.stock <= 0 && (
 							<p className="font-sans text-sm text-destructive">Agotado temporalmente</p>
 						)}
-						<AddToCartButton productId={product.id} disabled={product.metadata.stock <= 0} />
+						{personalizationLabel ? (
+							alreadyPersonalizedInCart ? (
+								<p className="rounded border border-border bg-secondary/40 p-4 font-sans text-sm text-muted-foreground">
+									Ya tienes esta pieza personalizada en tu carrito. Si quieres otra con un texto distinto,
+									termina este pedido primero y haz una compra aparte.{" "}
+									<YnsLink href="/cart" className="link-wipe font-medium text-foreground">
+										Ver carrito
+									</YnsLink>
+								</p>
+							) : (
+								<PersonalizedAddToCart
+									productId={product.id}
+									label={personalizationLabel}
+									disabled={product.metadata.stock <= 0}
+								/>
+							)
+						) : (
+							<AddToCartButton productId={product.id} disabled={product.metadata.stock <= 0} />
+						)}
 
 						{/* Nota de confianza con punto clay */}
 						<p className="flex items-center gap-2 font-sans text-sm text-muted-foreground">

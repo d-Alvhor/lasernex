@@ -7,10 +7,14 @@ export const StickyBottom = ({
 	children,
 	product,
 	locale,
+	personalizationLabel,
+	alreadyPersonalizedInCart,
 }: Readonly<{
 	children: React.ReactNode;
 	product: Commerce.MappedProduct;
 	locale: string;
+	personalizationLabel?: string | null;
+	alreadyPersonalizedInCart?: boolean;
 }>) => {
 	const [show, setShow] = useState(false);
 	useEffect(() => {
@@ -37,7 +41,13 @@ export const StickyBottom = ({
 	return (
 		<>
 			{children}
-			<ProductBottomStickyCard product={product} locale={locale} show={show} />
+			<ProductBottomStickyCard
+				product={product}
+				locale={locale}
+				show={show}
+				personalizationLabel={personalizationLabel}
+				alreadyPersonalizedInCart={alreadyPersonalizedInCart}
+			/>
 		</>
 	);
 };

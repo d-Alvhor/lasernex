@@ -101,6 +101,7 @@ export async function POST(request: Request) {
 								currency,
 								locale: "es-ES",
 							}),
+							personalization: order.order.metadata[`personalization_${line.product!.id}`] ?? null,
 						}));
 					const totalFormatted = formatMoney({ amount: order.order.amount, currency, locale: "es-ES" });
 					const shippingAddress = order.order.shipping?.address
