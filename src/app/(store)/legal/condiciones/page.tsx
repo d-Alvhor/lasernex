@@ -3,6 +3,7 @@ import type { Metadata } from "next/types";
 
 export const metadata: Metadata = {
 	title: "Condiciones de venta",
+	description: "Condiciones de venta de Lasernex: precios, envíos, pago, plazos, garantía y devoluciones.",
 	alternates: { canonical: `${publicUrl}/legal/condiciones` },
 };
 

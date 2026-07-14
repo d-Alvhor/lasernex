@@ -3,6 +3,7 @@ import type { Metadata } from "next/types";
 
 export const metadata: Metadata = {
 	title: "Aviso legal",
+	description: "Aviso legal de Lasernex: titularidad del sitio, condiciones de uso y propiedad intelectual.",
 	alternates: { canonical: `${publicUrl}/legal/aviso-legal` },
 };
 

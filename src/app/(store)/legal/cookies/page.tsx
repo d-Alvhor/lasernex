@@ -3,6 +3,7 @@ import type { Metadata } from "next/types";
 
 export const metadata: Metadata = {
 	title: "Política de cookies",
+	description: "Qué cookies usa Lasernex y para qué.",
 	alternates: { canonical: `${publicUrl}/legal/cookies` },
 };
 
