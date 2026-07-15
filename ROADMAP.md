@@ -35,7 +35,7 @@
 ### Semana 4 — Calidad y lanzamiento (= FASE 4)
 - [x] Cabeceras de seguridad de `SECURITY.md` §1 implementadas y verificadas (CSP adaptada a Stripe Elements embebido, ver ADR-002)
 - [ ] Resto de la auditoría contra `SECURITY.md` §6 y `ACCESSIBILITY.md` §3 (parcial: rate limiting, XSS del JSON-LD, alt text y aria-label de carrito ya cerrados 2026-07-12)
-- [ ] Lighthouse ≥ 90 en las 4 categorías (móvil, URL de producción)
+- [x] Lighthouse ≥ 90 en las 4 categorías (móvil, URL de producción) — medido 2026-07-15 con PageSpeed Insights v5 sobre home, ficha de producto y categoría: móvil 96-98 performance / 99-100 accessibility / 100 best-practices / 100 seo (escritorio 98-99/99-100/100/100). Único hallazgo menor: `heading-order` en `/category/decoracion` (accessibility 99, no bloquea el objetivo)
 - [ ] Paso a producción: claves live ✅ y webhook live ✅ (2026-07-12) — falta la prueba de compra REAL (y su reembolso)
 - [ ] Textos legales validados con el asesor; datos fiscales reales en Stripe
 - [ ] Validar con el asesor el texto de excepción de desistimiento del email de confirmación (art. 103.c)
