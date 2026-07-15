@@ -16,9 +16,6 @@ export const env = createEnv({
 			.optional()
 			.transform((str) => !!str),
 
-		TRIEVE_DATASET_ID: z.string().optional(),
-		TRIEVE_API_KEY: z.string().optional(),
-
 		// Resend: emails de marca (confirmación de pedido, envío) — ver ARCHITECTURE.md ADR-005
 		RESEND_API_KEY: z.string().optional(),
 		RESEND_FROM_EMAIL: z.string().optional().default("Lasernex <pedidos@lasernex.es>"),
@@ -38,7 +35,7 @@ export const env = createEnv({
 
 		NEXT_PUBLIC_NEWSLETTER_ENDPOINT: z.string().optional(),
 
-		NEXT_PUBLIC_LANGUAGE: z.string().optional().default("en-US"),
+		NEXT_PUBLIC_LANGUAGE: z.string().optional().default("es-ES"),
 	},
 	runtimeEnv: {
 		STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
@@ -51,9 +48,6 @@ export const env = createEnv({
 		NEXT_PUBLIC_NEWSLETTER_ENDPOINT: process.env.NEXT_PUBLIC_NEWSLETTER_ENDPOINT,
 
 		ENABLE_STRIPE_TAX: process.env.ENABLE_STRIPE_TAX,
-
-		TRIEVE_DATASET_ID: process.env.TRIEVE_DATASET_ID,
-		TRIEVE_API_KEY: process.env.TRIEVE_API_KEY,
 
 		RESEND_API_KEY: process.env.RESEND_API_KEY,
 		RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,

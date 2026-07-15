@@ -31,6 +31,8 @@ export interface OrderConfirmationEmailProps {
 		postalCode?: string | null;
 		country?: string | null;
 	} | null;
+	/** Si el pedido incluye algún producto personalizado (sin derecho de desistimiento, art. 103.c TRLGDCU). */
+	hasPersonalization?: boolean;
 	storeUrl: string;
 }
 
@@ -44,6 +46,7 @@ export const OrderConfirmationEmail = ({
 	lines,
 	totalFormatted,
 	shippingAddress,
+	hasPersonalization,
 	storeUrl,
 }: OrderConfirmationEmailProps) => {
 	return (
@@ -118,12 +121,23 @@ export const OrderConfirmationEmail = ({
 
 					<Hr />
 
-					<Text style={{ fontSize: "13px", color: "#737373" }}>
-						Te avisaremos por email en cuanto tu pedido salga hacia tu domicilio. Puedes consultar nuestras{" "}
-						<Link href={`${storeUrl}/legal/condiciones`}>condiciones de venta</Link> y tu{" "}
-						<Link href={`${storeUrl}/legal/desistimiento`}>derecho de desistimiento</Link> (14 días naturales)
-						en cualquier momento.
-					</Text>
+					{hasPersonalization ? (
+						<Text style={{ fontSize: "13px", color: "#737373" }}>
+							Te avisaremos por email en cuanto tu pedido salga hacia tu domicilio. Tu pedido incluye
+							productos personalizados, que no admiten desistimiento (art. 103.c de la Ley General para la
+							Defensa de los Consumidores); para el resto de productos dispones de 14 días naturales. Puedes
+							consultar nuestras <Link href={`${storeUrl}/legal/condiciones`}>condiciones de venta</Link> y tu{" "}
+							<Link href={`${storeUrl}/legal/desistimiento`}>derecho de desistimiento</Link> en cualquier
+							momento.
+						</Text>
+					) : (
+						<Text style={{ fontSize: "13px", color: "#737373" }}>
+							Te avisaremos por email en cuanto tu pedido salga hacia tu domicilio. Puedes consultar nuestras{" "}
+							<Link href={`${storeUrl}/legal/condiciones`}>condiciones de venta</Link> y tu{" "}
+							<Link href={`${storeUrl}/legal/desistimiento`}>derecho de desistimiento</Link> (14 días
+							naturales) en cualquier momento.
+						</Text>
+					)}
 
 					<Text style={{ fontSize: "12px", color: "#a3a3a3", marginTop: "24px" }}>
 						Lasernex · Piezas impresas en 3D, fabricadas en España

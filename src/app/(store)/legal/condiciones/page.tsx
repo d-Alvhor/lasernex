@@ -2,7 +2,7 @@ import { publicUrl } from "@/env.mjs";
 import type { Metadata } from "next/types";
 
 export const metadata: Metadata = {
-	title: "Condiciones de venta",
+	title: "Condiciones de venta · Lasernex",
 	description: "Condiciones de venta de Lasernex: precios, envíos, pago, plazos, garantía y devoluciones.",
 	alternates: { canonical: `${publicUrl}/legal/condiciones` },
 };

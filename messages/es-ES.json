@@ -17,7 +17,6 @@
 	"Global.newsletter.error": "No se ha podido completar la suscripción.",
 	"Global.nav.search.title": "Buscar",
 	"Global.nav.search.placeholder": "Buscar productos…",
-	"Global.nav.cartSummary.itemsInCart": "Artículos en el carrito",
 	"Global.nav.cartSummary.total": "Total",
 	"Global.nav.cartSummary.totalItems": "{count, plural, =0 {Carrito vacío} =1 {# artículo} other {# artículos}} en el carrito",
 	"Global.addToCart.success": "{productName} añadido al carrito",

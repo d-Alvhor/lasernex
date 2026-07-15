@@ -1,10 +1,31 @@
-import { Body, Container, Head, Heading, Hr, Html, Link, Preview, Text } from "@react-email/components";
+import {
+	Body,
+	Column,
+	Container,
+	Head,
+	Heading,
+	Hr,
+	Html,
+	Link,
+	Preview,
+	Row,
+	Text,
+} from "@react-email/components";
+
+export interface OrderShippedLine {
+	name: string;
+	quantity: number;
+	unitAmountFormatted: string;
+	personalization?: string | null;
+}
 
 export interface OrderShippedEmailProps {
 	orderNumber: string;
 	customerName: string;
 	trackingNumber?: string | null;
 	trackingUrl?: string | null;
+	/** Líneas del pedido (con personalización) para que quede claro QUÉ se envió. */
+	lines?: OrderShippedLine[] | null;
 	storeUrl: string;
 }
 
@@ -15,6 +36,7 @@ export const OrderShippedEmail = ({
 	customerName,
 	trackingNumber,
 	trackingUrl,
+	lines,
 	storeUrl,
 }: OrderShippedEmailProps) => {
 	return (
@@ -39,6 +61,29 @@ export const OrderShippedEmail = ({
 					<Text>
 						Hemos enviado tu pedido nº <strong>{orderNumber}</strong>.
 					</Text>
+
+					{lines && lines.length > 0 && (
+						<>
+							<Hr />
+							{lines.map((line, i) => (
+								<Row key={i} style={{ marginBottom: "8px" }}>
+									<Column>
+										<Text style={{ margin: 0 }}>
+											{line.name} × {line.quantity}
+										</Text>
+										{line.personalization && (
+											<Text style={{ margin: 0, fontSize: "13px", color: "#737373" }}>
+												Personalización: {line.personalization}
+											</Text>
+										)}
+									</Column>
+									<Column align="right">
+										<Text style={{ margin: 0 }}>{line.unitAmountFormatted}</Text>
+									</Column>
+								</Row>
+							))}
+						</>
+					)}
 
 					{trackingNumber && (
 						<>

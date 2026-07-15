@@ -36,11 +36,11 @@ export default async function SearchPage(props: {
 	const products = await Search.searchProducts(query);
 
 	return (
-		<main>
+		<div>
 			<h1 className="font-serif text-3xl font-normal leading-tight text-foreground my-6">
 				{t("title", { query })}
 			</h1>
 			{products?.length ? <ProductList products={products} /> : <ProductNotFound query={query} />}
-		</main>
+		</div>
 	);
 }

@@ -2,9 +2,13 @@
 
 import { clearCartCookie, getCartCookieJson, setCartCookieJson } from "@/lib/cart";
 import { rateLimit } from "@/lib/rate-limit";
+import { stringToInt } from "@/lib/utils";
 import * as Commerce from "commerce-kit";
 import { updateTag } from "next/cache";
 import { headers } from "next/headers";
+import { z } from "zod";
+
+const personalizationSchema = z.string().trim().min(1).max(40);
 
 export async function getCartFromCookiesAction() {
 	const cartJson = await getCartCookieJson();
@@ -60,24 +64,47 @@ export async function clearCartCookieAction() {
 }
 
 export async function addToCartAction(formData: FormData) {
+	// Rate limit best-effort — mismo patrón que findOrCreateCartIdFromCookiesAction (SECURITY.md §4).
+	const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+	if (!rateLimit(ip)) {
+		throw new Error("Demasiadas peticiones. Espera un minuto y vuelve a intentarlo.");
+	}
+
 	const productId = formData.get("productId");
 	if (!productId || typeof productId !== "string") {
 		throw new Error("Invalid product ID");
 	}
-	const personalization = formData.get("personalization");
+
+	const personalizationRaw = formData.get("personalization");
+	let personalization: string | null = null;
+	if (personalizationRaw !== null) {
+		const parsed = personalizationSchema.safeParse(personalizationRaw);
+		if (!parsed.success) {
+			throw new Error("El texto de personalización no es válido: debe tener entre 1 y 40 caracteres.");
+		}
+		personalization = parsed.data;
+	}
 
 	const cart = await getCartFromCookiesAction();
+
+	// Cantidad fija a 1 por texto en servidor: si ya hay una unidad personalizada
+	// de este producto en el carrito, no se puede añadir otra (mismo patrón que Etsy).
+	if (personalization && cart && stringToInt(cart.cart.metadata[productId]) >= 1) {
+		throw new Error(
+			"Este producto personalizado ya está en tu carrito. Completa este pedido para encargar otro texto.",
+		);
+	}
 
 	const updatedCart = await Commerce.cartAdd({ productId, cartId: cart?.cart.id });
 
 	if (updatedCart) {
 		// Texto de personalización (grabado/nombre) para productos que lo piden —
 		// se guarda como metadata aparte, NUNCA en la clave `prod_...` que usa el
-		// contador de cantidad (ver ADR de personalización en OPERATIONS.md).
-		if (personalization && typeof personalization === "string") {
+		// contador de cantidad (ver ARCHITECTURE.md, flujo de compra).
+		if (personalization) {
 			await Commerce.updatePaymentIntent({
 				paymentIntentId: updatedCart.id,
-				data: { metadata: { [`personalization_${productId}`]: personalization.slice(0, 40) } },
+				data: { metadata: { [`personalization_${productId}`]: personalization } },
 			});
 		}
 
@@ -113,6 +140,9 @@ export async function decreaseQuantity(productId: string) {
 		cartId: cart.cart.id,
 		operation: "DECREASE",
 	});
+	if (stringToInt(cart.cart.metadata[productId]) - 1 <= 0) {
+		await clearPersonalizationMetadata(cart, productId);
+	}
 }
 
 export async function setQuantity({
@@ -129,6 +159,21 @@ export async function setQuantity({
 		throw new Error("Cart not found");
 	}
 	await Commerce.cartSetQuantity({ productId, cartId, quantity });
+	if (quantity <= 0) {
+		await clearPersonalizationMetadata(cart, productId);
+	}
+}
+
+// Al eliminar del carrito un producto personalizado, limpia su texto: Stripe
+// borra una clave de metadata cuando se le asigna la cadena vacía.
+async function clearPersonalizationMetadata(cart: Commerce.Cart, productId: string) {
+	if (!cart.cart.metadata[`personalization_${productId}`]) {
+		return;
+	}
+	await Commerce.updatePaymentIntent({
+		paymentIntentId: cart.cart.id,
+		data: { metadata: { [`personalization_${productId}`]: "" } },
+	});
 }
 
 export async function commerceGPTRevalidateAction() {

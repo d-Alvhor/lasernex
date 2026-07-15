@@ -13,6 +13,8 @@ export const AddToCartButton = ({
 	className,
 	personalization,
 	blockSubmit,
+	onBlockedSubmit,
+	id,
 }: {
 	productId: string;
 	disabled?: boolean;
@@ -21,6 +23,11 @@ export const AddToCartButton = ({
 	/** Bloquea el envío (p.ej. falta texto de personalización) sin cambiar el
 	 * texto del botón a "Agotado" — eso es solo para disabled (sin stock). */
 	blockSubmit?: boolean;
+	/** Se llama al pulsar con blockSubmit activo (p.ej. para enfocar el campo que falta). */
+	onBlockedSubmit?: () => void;
+	/** Solo la ficha principal pasa "button-add-to-cart" (lo observa el
+	 * IntersectionObserver de StickyBottom); la sticky card no lleva id. */
+	id?: string;
 }) => {
 	const t = useTranslations("Global.addToCart");
 	const [pending, startTransition] = useTransition();
@@ -29,13 +36,16 @@ export const AddToCartButton = ({
 
 	return (
 		<Button
-			id="button-add-to-cart"
+			id={id}
 			size="lg"
 			type="submit"
 			className={cn("rounded-full text-lg relative", className)}
 			onClick={async (e) => {
 				if (isDisabled) {
 					e.preventDefault();
+					if (blockSubmit && !disabled && !pending) {
+						onBlockedSubmit?.();
+					}
 					return;
 				}
 

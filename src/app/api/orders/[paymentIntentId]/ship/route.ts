@@ -2,9 +2,19 @@ import { timingSafeEqual } from "node:crypto";
 import { env } from "@/env.mjs";
 import { sendOrderShippedEmail } from "@/lib/email/resend";
 import { rateLimit } from "@/lib/rate-limit";
+import { formatMoney } from "@/lib/utils";
 import * as Commerce from "commerce-kit";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+
+// Escapa todo valor dinámico interpolado en htmlResponse (evita inyección HTML).
+const escapeHtml = (value: string) =>
+	value
+		.replaceAll("&", "&amp;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;")
+		.replaceAll('"', "&quot;")
+		.replaceAll("'", "&#39;");
 
 // Compara tokens sin filtrar por temporización (evita side-channel timing attack
 // sobre el secreto compartido; el "!==" directo sí es vulnerable a esto).
@@ -57,15 +67,46 @@ export async function GET(request: Request, props: { params: Promise<{ paymentIn
 	const email = order?.order.latest_charge?.billing_details?.email;
 
 	if (!order || !email) {
-		return htmlResponse(`No se ha encontrado el pedido ${paymentIntentId} o no tiene email asociado.`, 404);
+		return htmlResponse(
+			`No se ha encontrado el pedido ${escapeHtml(paymentIntentId)} o no tiene email asociado.`,
+			404,
+		);
 	}
 
-	await sendOrderShippedEmail(email, {
+	// Mismas líneas que construye el webhook (con personalización): así Carla y
+	// el cliente ven QUÉ se envió, incluido el texto grabado.
+	const currency = order.order.currency;
+	const lines = order.lines
+		.filter((line) => line.product)
+		.map((line) => ({
+			name: line.product!.name,
+			quantity: line.quantity,
+			unitAmountFormatted: formatMoney({
+				amount: (line.product!.default_price.unit_amount ?? 0) * line.quantity,
+				currency,
+				locale: "es-ES",
+			}),
+			personalization: order.order.metadata[`personalization_${line.product!.id}`] ?? null,
+		}));
+
+	const result = await sendOrderShippedEmail(email, {
 		orderNumber: order.order.id,
 		customerName: order.order.shipping?.name ?? order.order.latest_charge?.billing_details?.name ?? "",
 		trackingNumber: parsed.data.tracking ?? null,
 		trackingUrl: parsed.data.trackingUrl ?? null,
+		lines,
 	});
 
-	return htmlResponse(`✅ Email de "pedido enviado" enviado a ${email} (pedido ${order.order.id}).`, 200);
+	// Honestidad: solo decimos ✅ si el email salió de verdad.
+	if ("skipped" in result || "failed" in result) {
+		return htmlResponse(
+			"⚠️ No se pudo enviar el email al cliente. Inténtalo de nuevo en unos minutos o avísale tú directamente.",
+			502,
+		);
+	}
+
+	return htmlResponse(
+		`✅ Email de "pedido enviado" enviado a ${escapeHtml(email)} (pedido ${escapeHtml(order.order.id)}).`,
+		200,
+	);
 }

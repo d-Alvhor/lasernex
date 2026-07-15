@@ -2,7 +2,7 @@ import { publicUrl } from "@/env.mjs";
 import type { Metadata } from "next/types";
 
 export const metadata: Metadata = {
-	title: "Política de privacidad",
+	title: "Política de privacidad · Lasernex",
 	description: "Qué datos personales trata Lasernex, para qué y cómo ejercer tus derechos (RGPD/LOPDGDD).",
 	alternates: { canonical: `${publicUrl}/legal/privacidad` },
 };

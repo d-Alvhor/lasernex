@@ -2,7 +2,7 @@ import { publicUrl } from "@/env.mjs";
 import type { Metadata } from "next/types";
 
 export const metadata: Metadata = {
-	title: "Política de cookies",
+	title: "Política de cookies · Lasernex",
 	description: "Qué cookies usa Lasernex y para qué.",
 	alternates: { canonical: `${publicUrl}/legal/cookies` },
 };

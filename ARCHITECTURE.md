@@ -54,7 +54,7 @@ flowchart TB
 ## 2. Flujo de compra paso a paso
 
 1. **Catálogo (`/`)** — El servidor (RSC) lee `Products` + `Prices` activos de la API de Stripe. Se cachea (ISR) para no golpear la API en cada visita; revalidación periódica o bajo demanda.
-2. **Página de producto (`/product/[slug]`)** — Datos del producto desde Stripe (nombre, descripción, imágenes, precio, variantes via metadata). Incluye JSON-LD `schema.org/Product` y Open Graph.
+2. **Página de producto (`/product/[slug]`)** — Datos del producto desde Stripe (nombre, descripción, imágenes, precio, variantes via metadata). Incluye JSON-LD `schema.org/Product` y Open Graph. Si el producto tiene metadata `preview`, la ficha exige un texto de personalización que viaja en la metadata del PaymentIntent (clave `personalization_<productId>`) hasta el webhook y los emails; el producto personalizado queda sin desistimiento (art. 103.c TRLGDCU).
 3. **Carrito** — Estado en cookie firmada (líneas: `price_id` + cantidad). **No hay BD**: el carrito vive en el navegador del cliente.
 4. **Checkout** — En `/cart`, una Server Action crea/actualiza un **PaymentIntent** (`commerce-kit`: `cartCreate`/`updatePaymentIntent`) con las líneas del carrito, dirección de envío limitada a `ES`, tarifa de envío elegida e IVA. Los campos de tarjeta son **Stripe Elements embebido** (`@stripe/react-stripe-js`) montados en la misma página: la tarjeta nunca toca nuestro servidor ni nuestro JS, sin redirección a un dominio de Stripe (ver ADR-002).
 5. **Pago completado** — Stripe emite `payment_intent.succeeded` → nuestro endpoint `/api/stripe-webhook` **verifica la firma** con `STRIPE_WEBHOOK_SECRET`.

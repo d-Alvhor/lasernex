@@ -43,12 +43,12 @@ export default async function CategoryPage(props: {
 	const t = await getTranslations("/category.page");
 
 	return (
-		<main className="pb-8">
+		<div className="pb-8">
 			<h1 className="font-serif text-3xl font-normal leading-tight text-foreground my-6">
 				{deslugify(params.slug)}
-				<div className="text-lg font-semibold text-muted-foreground">{t("title")}</div>
+				<span className="block text-lg font-semibold text-muted-foreground">{t("title")}</span>
 			</h1>
 			<ProductList products={products} />
-		</main>
+		</div>
 	);
 }

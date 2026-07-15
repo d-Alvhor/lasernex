@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 		return new Response("STRIPE_WEBHOOK_SECRET is not configured", { status: 500 });
 	}
 
-	const signature = (await request.headers).get("Stripe-Signature");
+	const signature = request.headers.get("Stripe-Signature");
 	if (!signature) {
 		return new Response("No signature", { status: 401 });
 	}
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 	});
 
 	const [error, event] = await unpackPromise(
-		stripe.webhooks.constructEventAsync(await (await request.text)(), signature, env.STRIPE_WEBHOOK_SECRET),
+		stripe.webhooks.constructEventAsync(await request.text(), signature, env.STRIPE_WEBHOOK_SECRET),
 	);
 
 	if (error) {
@@ -58,92 +58,150 @@ export async function POST(request: Request) {
 				});
 			}
 
-			const products = await Commerce.getProductsFromMetadata(metadata);
+			// Idempotencia: Stripe puede reenviar el mismo evento (SECURITY.md §2 exige
+			// tolerar duplicados) — si el stock de este pago ya se descontó, no repetirlo.
+			if (event.data.object.metadata.stock_processed) {
+				console.warn("Stock ya descontado para este pago, se omite el decremento", {
+					paymentIntentId: event.data.object.id,
+				});
+			} else {
+				const products = await Commerce.getProductsFromMetadata(metadata);
 
-			for (const { product } of products) {
-				if (product && product.metadata.stock !== Infinity) {
-					await stripe.products.update(product.id, {
-						metadata: {
-							stock: product.metadata.stock - 1,
-						},
-					});
+				for (const { product, quantity } of products) {
+					if (product && product.metadata.stock !== Infinity) {
+						await stripe.products.update(product.id, {
+							metadata: {
+								stock: product.metadata.stock - quantity,
+							},
+						});
 
-					revalidateTag(`product-${product.id}`, "max");
+						revalidateTag(`product-${product.id}`, "max");
+					}
 				}
+
+				// Stripe hace merge de metadata: esta clave se añade sin borrar las del carrito.
+				await stripe.paymentIntents.update(event.data.object.id, {
+					metadata: { stock_processed: "1" },
+				});
 			}
 
 			revalidateTag(`cart-${event.data.object.id}`, "max");
 
-			// Email de confirmación (Resend) — ver ARCHITECTURE.md flujo de compra y ADR-005.
-			// No bloqueante: si falla el email, el pedido y el pago ya están confirmados en Stripe.
+			// Emails (Resend) — ver ARCHITECTURE.md flujo de compra y ADR-005.
+			// No bloqueantes: si falla un email, el pedido y el pago ya están confirmados
+			// en Stripe. Cada paso lleva su propio try/catch para que el fallo de uno
+			// no impida los siguientes.
+			let orderData: {
+				email: string;
+				orderNumber: string;
+				receiptEmailAlreadySet: boolean;
+				customerName: string;
+				lines: {
+					name: string;
+					quantity: number;
+					unitAmountFormatted: string;
+					personalization: string | null;
+				}[];
+				totalFormatted: string;
+				shippingAddress: {
+					line1?: string | null;
+					line2?: string | null;
+					city?: string | null;
+					postalCode?: string | null;
+					country?: string | null;
+				} | null;
+			} | null = null;
+
 			try {
 				const order = await Commerce.orderGet(event.data.object.id);
 				const email = order?.order.latest_charge?.billing_details?.email;
 				if (order && email) {
-					// receipt_email nunca se fija durante el checkout (LinkAuthenticationElement
-					// solo guarda el email en billing_details, no en el propio PaymentIntent), así
-					// que sin esto Stripe NUNCA manda su recibo automático (se lo prometemos al
-					// cliente en /legal/condiciones). Fijarlo aquí, tras el pago, SÍ dispara el envío.
-					if (!order.order.receipt_email) {
-						await stripe.paymentIntents.update(event.data.object.id, { receipt_email: email });
-					}
-
 					const currency = order.order.currency;
-					const customerName =
-						order.order.shipping?.name ?? order.order.latest_charge?.billing_details?.name ?? "";
-					const lines = order.lines
-						.filter((line) => line.product)
-						.map((line) => ({
-							name: line.product!.name,
-							quantity: line.quantity,
-							unitAmountFormatted: formatMoney({
-								amount: (line.product!.default_price.unit_amount ?? 0) * line.quantity,
-								currency,
-								locale: "es-ES",
-							}),
-							personalization: order.order.metadata[`personalization_${line.product!.id}`] ?? null,
-						}));
-					const totalFormatted = formatMoney({ amount: order.order.amount, currency, locale: "es-ES" });
-					const shippingAddress = order.order.shipping?.address
-						? {
-								line1: order.order.shipping.address.line1,
-								line2: order.order.shipping.address.line2,
-								city: order.order.shipping.address.city,
-								postalCode: order.order.shipping.address.postal_code,
-								country: order.order.shipping.address.country,
-							}
-						: null;
-
-					await sendOrderConfirmationEmail(email, {
+					orderData = {
+						email,
 						orderNumber: order.order.id,
-						customerName,
-						lines,
-						totalFormatted,
-						shippingAddress,
+						receiptEmailAlreadySet: Boolean(order.order.receipt_email),
+						customerName:
+							order.order.shipping?.name ?? order.order.latest_charge?.billing_details?.name ?? "",
+						lines: order.lines
+							.filter((line) => line.product)
+							.map((line) => ({
+								name: line.product!.name,
+								quantity: line.quantity,
+								unitAmountFormatted: formatMoney({
+									amount: (line.product!.default_price.unit_amount ?? 0) * line.quantity,
+									currency,
+									locale: "es-ES",
+								}),
+								personalization: order.order.metadata[`personalization_${line.product!.id}`] ?? null,
+							})),
+						totalFormatted: formatMoney({ amount: order.order.amount, currency, locale: "es-ES" }),
+						shippingAddress: order.order.shipping?.address
+							? {
+									line1: order.order.shipping.address.line1,
+									line2: order.order.shipping.address.line2,
+									city: order.order.shipping.address.city,
+									postalCode: order.order.shipping.address.postal_code,
+									country: order.order.shipping.address.country,
+								}
+							: null,
+					};
+				} else {
+					console.warn("No se pudieron enviar los emails de pedido: pedido o email no encontrados", {
+						paymentIntentId: event.data.object.id,
 					});
+				}
+			} catch (orderError) {
+				console.error("Error obteniendo los datos del pedido para los emails", orderError);
+			}
 
-					// El enlace lleva SHIP_NOTIFICATION_SECRET en claro: este email va SOLO
-					// a config.contact.email (Carla), nunca al cliente ni a ninguna
-					// superficie pública.
+			if (orderData) {
+				// receipt_email nunca se fija durante el checkout (LinkAuthenticationElement
+				// solo guarda el email en billing_details, no en el propio PaymentIntent), así
+				// que sin esto Stripe NUNCA manda su recibo automático (se lo prometemos al
+				// cliente en /legal/condiciones). Fijarlo aquí, tras el pago, SÍ dispara el envío.
+				try {
+					if (!orderData.receiptEmailAlreadySet) {
+						await stripe.paymentIntents.update(event.data.object.id, { receipt_email: orderData.email });
+					}
+				} catch (receiptError) {
+					console.error("Error fijando receipt_email en el PaymentIntent", receiptError);
+				}
+
+				// Email interno PRIMERO: que Carla se entere del pedido aunque falle el
+				// email al cliente. El enlace lleva SHIP_NOTIFICATION_SECRET en claro:
+				// va SOLO a config.contact.email (Carla), nunca al cliente ni a ninguna
+				// superficie pública.
+				try {
 					if (env.SHIP_NOTIFICATION_SECRET) {
 						await sendOrderNotificationEmail(config.contact.email, {
-							orderNumber: order.order.id,
-							customerName,
-							lines,
-							totalFormatted,
-							shippingAddress,
+							orderNumber: orderData.orderNumber,
+							customerName: orderData.customerName,
+							lines: orderData.lines,
+							totalFormatted: orderData.totalFormatted,
+							shippingAddress: orderData.shippingAddress,
 							shipToken: env.SHIP_NOTIFICATION_SECRET,
 						});
 					} else {
 						console.warn("SHIP_NOTIFICATION_SECRET no configurado: email interno de nuevo pedido NO enviado");
 					}
-				} else {
-					console.warn("No se pudo enviar email de confirmación: pedido o email no encontrados", {
-						paymentIntentId: event.data.object.id,
-					});
+				} catch (notificationError) {
+					console.error("Error enviando email interno de nuevo pedido", notificationError);
 				}
-			} catch (emailError) {
-				console.error("Error enviando email de confirmación", emailError);
+
+				try {
+					const hasPersonalization = orderData.lines.some((line) => Boolean(line.personalization));
+					await sendOrderConfirmationEmail(orderData.email, {
+						orderNumber: orderData.orderNumber,
+						customerName: orderData.customerName,
+						lines: orderData.lines,
+						totalFormatted: orderData.totalFormatted,
+						shippingAddress: orderData.shippingAddress,
+						hasPersonalization,
+					});
+				} catch (confirmationError) {
+					console.error("Error enviando email de confirmación al cliente", confirmationError);
+				}
 			}
 
 			break;

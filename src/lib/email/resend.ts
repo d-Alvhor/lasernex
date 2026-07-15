@@ -30,7 +30,7 @@ export const sendOrderConfirmationEmail = async (
 		return { skipped: true as const };
 	}
 
-	return resend.emails.send(
+	const result = await resend.emails.send(
 		{
 			from: env.RESEND_FROM_EMAIL,
 			to,
@@ -39,6 +39,11 @@ export const sendOrderConfirmationEmail = async (
 		},
 		{ idempotencyKey: `order-confirmation-${props.orderNumber}` },
 	);
+	if (result.error) {
+		console.error("Error enviando email de confirmación de pedido", props.orderNumber, result.error);
+		return { failed: true as const };
+	}
+	return result;
 };
 
 // Va SOLO a Carla (config.contact.email, resuelto por el llamador en el
@@ -53,7 +58,7 @@ export const sendOrderNotificationEmail = async (
 		return { skipped: true as const };
 	}
 
-	return resend.emails.send(
+	const result = await resend.emails.send(
 		{
 			from: env.RESEND_FROM_EMAIL,
 			to,
@@ -62,6 +67,11 @@ export const sendOrderNotificationEmail = async (
 		},
 		{ idempotencyKey: `order-notification-${props.orderNumber}` },
 	);
+	if (result.error) {
+		console.error("Error enviando email interno de nuevo pedido", props.orderNumber, result.error);
+		return { failed: true as const };
+	}
+	return result;
 };
 
 export const sendOrderShippedEmail = async (to: string, props: Omit<OrderShippedEmailProps, "storeUrl">) => {
@@ -71,7 +81,7 @@ export const sendOrderShippedEmail = async (to: string, props: Omit<OrderShipped
 		return { skipped: true as const };
 	}
 
-	return resend.emails.send(
+	const result = await resend.emails.send(
 		{
 			from: env.RESEND_FROM_EMAIL,
 			to,
@@ -80,4 +90,9 @@ export const sendOrderShippedEmail = async (to: string, props: Omit<OrderShipped
 		},
 		{ idempotencyKey: `order-shipped-${props.orderNumber}-${props.trackingNumber ?? "no-tracking"}` },
 	);
+	if (result.error) {
+		console.error("Error enviando email de pedido enviado", props.orderNumber, result.error);
+		return { failed: true as const };
+	}
+	return result;
 };

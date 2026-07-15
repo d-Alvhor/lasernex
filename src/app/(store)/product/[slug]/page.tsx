@@ -203,7 +203,7 @@ export default async function SingleProductPage(props: {
 															"flex min-h-11 cursor-pointer items-center justify-center rounded border border-border px-4 font-sans text-sm transition-colors hover:border-foreground/50",
 															isSelected && "border-foreground bg-secondary font-medium",
 														)}
-														aria-selected={isSelected}
+														aria-current={isSelected ? "true" : undefined}
 													>
 														{deslugify(variant.metadata.variant)}
 													</YnsLink>
@@ -247,7 +247,11 @@ export default async function SingleProductPage(props: {
 								/>
 							)
 						) : (
-							<AddToCartButton productId={product.id} disabled={product.metadata.stock <= 0} />
+							<AddToCartButton
+								id="button-add-to-cart"
+								productId={product.id}
+								disabled={product.metadata.stock <= 0}
+							/>
 						)}
 
 						{/* Nota de confianza con punto clay */}

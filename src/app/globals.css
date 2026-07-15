@@ -185,6 +185,12 @@
 	* {
 		@apply border-border;
 	}
+	html {
+		/* El hero full-bleed usa w-screen: con scrollbars clásicas eso puede
+		   provocar scroll horizontal de unos píxeles. clip lo corta sin crear
+		   un nuevo contexto de scroll (a diferencia de hidden). */
+		overflow-x: clip;
+	}
 	body {
 		@apply bg-background text-foreground;
 	}

@@ -2,7 +2,7 @@ import { publicUrl } from "@/env.mjs";
 import type { Metadata } from "next/types";
 
 export const metadata: Metadata = {
-	title: "Derecho de desistimiento",
+	title: "Derecho de desistimiento · Lasernex",
 	description: "Cómo ejercer tu derecho de desistimiento de 14 días en tus compras en Lasernex.",
 	alternates: { canonical: `${publicUrl}/legal/desistimiento` },
 };

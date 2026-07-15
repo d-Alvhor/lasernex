@@ -105,6 +105,40 @@ export const CartItemQuantity = ({
 	);
 };
 
+// Quitar una línea personalizada del carrito (cantidad fija a 1, sin stepper):
+// pone la cantidad a 0 con la acción setQuantity existente.
+export const CartItemRemoveButton = ({
+	productId,
+	productName,
+	cartId,
+}: {
+	productId: string;
+	productName: string;
+	cartId: string;
+}) => {
+	const { pending } = useFormStatus();
+	const elements = useElements();
+	const router = useRouter();
+
+	return (
+		<Button
+			variant="ghost"
+			size="sm"
+			type="submit"
+			disabled={pending}
+			className="h-auto p-0 font-sans text-xs font-normal text-muted-foreground underline underline-offset-2 hover:text-foreground"
+			formAction={async () => {
+				await setQuantity({ cartId, productId, quantity: 0 });
+				await elements?.fetchUpdates();
+				router.refresh();
+			}}
+			aria-label={`Quitar ${productName} del carrito`}
+		>
+			Quitar
+		</Button>
+	);
+};
+
 export const CartItemLineTotal = ({
 	currency,
 	quantity,

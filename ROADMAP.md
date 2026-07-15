@@ -38,6 +38,7 @@
 - [ ] Lighthouse ≥ 90 en las 4 categorías (móvil, URL de producción)
 - [ ] Paso a producción: claves live ✅ y webhook live ✅ (2026-07-12) — falta la prueba de compra REAL (y su reembolso)
 - [ ] Textos legales validados con el asesor; datos fiscales reales en Stripe
+- [ ] Validar con el asesor el texto de excepción de desistimiento del email de confirmación (art. 103.c)
 - [x] **Licencia del código base resuelta (ARCHITECTURE.md ADR-007)**: AGPL-3.0 elegida, repo público, aviso en footer con enlace al código
 - [ ] Google Search Console + sitemap enviado
 - [x] Sesión de formación con la dueña usando `OPERATIONS.md` — Carla subió su primer producto real en Modo real (2026-07-12)
@@ -50,8 +51,8 @@
 | Mejora | Qué aporta | Esfuerzo | Nota |
 |---|---|---|---|
 | **Cupones de descuento** | Marketing básico, recuperar carritos | 🟢 Bajo | Stripe Coupons/Promotion Codes: solo activar `allow_promotion_codes` en Checkout. Casi gratis — primera candidata |
-| **Tracking de envío en el email** | Menos "¿dónde está mi pedido?" | 🟢 Bajo | Campo de nº de seguimiento en el email "enviado" (Fase 3 ya deja la base) |
-| **Pedidos personalizados de impresión 3D** | Diferenciador real del negocio | 🔴 Alto | Formulario de solicitud (archivo STL/foto) + presupuesto manual + Stripe Payment Link por encargo. Sin desistimiento (art. 103.c) — ya contemplado en `/legal/desistimiento`. Definir bien antes de construir |
+| ~~**Tracking de envío en el email**~~ | Menos "¿dónde está mi pedido?" | 🟢 Bajo | ✅ **Hecho**: campo de nº de seguimiento en el email "enviado" |
+| **Pedidos personalizados de impresión 3D** | Diferenciador real del negocio | 🔴 Alto | La **personalización simple de texto** (nombre/grabado vía metadata `preview`) ya está **en producción (13-jul-2026)**; esta fila cubre solo encargos con archivo/presupuesto: formulario de solicitud (archivo STL/foto) + presupuesto manual + Stripe Payment Link por encargo. Sin desistimiento (art. 103.c) — ya contemplado en `/legal/desistimiento`. Definir bien antes de construir |
 | **Reseñas de clientes** | Confianza y SEO (rich results con estrellas) | 🟡 Medio | Sin BD propia exige decisión: servicio externo o algo creativo. **No** meter una BD solo para esto — reevaluar ADR-001 si llega el momento |
 | **Bizum en Checkout** | Método de pago local muy usado | 🟢 Bajo | Activarlo en Stripe cuando esté disponible para la cuenta |
 | **Expansión UE** | Más mercado | 🟡 Medio | Stripe Tax para IVA por país (OSS con la gestoría), zonas de envío UE, quizá inglés — revisar `src/app/(store)/legal/*` |

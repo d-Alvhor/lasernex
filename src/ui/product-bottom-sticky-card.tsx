@@ -20,7 +20,8 @@ export const ProductBottomStickyCard = ({
 }) => {
 	return (
 		<div
-			tabIndex={show ? 0 : -1}
+			// inert cuando está oculta: ni foco ni interacción para teclado/lectores.
+			inert={!show}
 			className={cn(
 				"fixed bottom-0 max-w-[100vw] left-0 right-0 bg-white/90 backdrop-blur-xs border-t py-2 sm:py-4 transition-all duration-300 ease-out z-10",
 				show

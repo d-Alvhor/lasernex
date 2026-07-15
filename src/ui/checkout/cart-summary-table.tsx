@@ -11,7 +11,12 @@ import {
 } from "@/components/ui/table";
 import { useTranslations } from "@/i18n/client";
 import { calculateCartTotalPossiblyWithTax, formatMoney, formatProductName } from "@/lib/utils";
-import { CartAmountWithSpinner, CartItemLineTotal, CartItemQuantity } from "@/ui/checkout/cart-items.client";
+import {
+	CartAmountWithSpinner,
+	CartItemLineTotal,
+	CartItemQuantity,
+	CartItemRemoveButton,
+} from "@/ui/checkout/cart-items.client";
 import { FormatDeliveryEstimate } from "@/ui/checkout/shipping-rates-section";
 import { YnsLink } from "@/ui/yns-link";
 import type * as Commerce from "commerce-kit";
@@ -93,7 +98,16 @@ export const CartSummaryTable = ({ cart, locale }: { cart: Commerce.Cart; locale
 								</TableCell>
 								<TableCell>
 									{personalization ? (
-										<span className="inline-block min-w-8 px-1 text-center text-sm tabular-nums">1</span>
+										<span className="flex flex-col items-start gap-1">
+											<span className="inline-block min-w-8 px-1 text-center text-sm tabular-nums">
+												{line.quantity}
+											</span>
+											<CartItemRemoveButton
+												cartId={cart.cart.id}
+												productId={line.product.id}
+												productName={formatProductName(line.product.name, line.product.metadata.variant)}
+											/>
+										</span>
 									) : (
 										<CartItemQuantity
 											cartId={cart.cart.id}

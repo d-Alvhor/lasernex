@@ -43,6 +43,8 @@ const securityHeaders = [
 
 **Verificación (Fase 4, en producción real)**: `curl -sI https://lasernex.es | grep -iE 'content-security|strict-transport|x-frame'` + [securityheaders.com](https://securityheaders.com) → objetivo nota A.
 
+> **Nota — `'unsafe-inline'` en `script-src` es deliberado**: Next hidrata con scripts inline y migrar a nonces/hashes tiene un coste (plumbing en cada render + riesgo de romper Stripe.js) que no compensa en esta superficie (sin contenido generado por usuarios, sin auth). No lo "arregles" sin medir antes el beneficio real.
+
 ---
 
 ## 2. Webhook de Stripe: verificación de firma (obligatoria)
@@ -102,6 +104,7 @@ Reglas:
 - Responder **rápido** (<10 s) y en 2xx; el trabajo pesado, tras responder o tolerando reintentos.
 - En local se prueba con `stripe listen --forward-to localhost:3000/api/stripe-webhook` (el CLI da su propio `whsec_…`).
 - Un `STRIPE_WEBHOOK_SECRET` **distinto por entorno** (el de producción se genera al crear el endpoint en el Dashboard).
+- **Idempotencia de emails — riesgo residual aceptado**: la deduplicación usa el `Idempotency-Key` de Resend, cuya ventana es de **24 h**, mientras que Stripe reintenta eventos hasta **~3 días**. Un reintento más allá de las 24 h podría producir un email duplicado. Es un riesgo puramente cosmético (nunca un doble cobro) y se acepta; no añadir BD/estado propio para cerrarlo.
 
 ---
 
@@ -123,16 +126,17 @@ Gestión en Vercel:
 - `.env.local` (gitignored) para desarrollo; `.env.example` en el repo **sin valores**, solo nombres documentados.
 - Las claves live se introducen SOLO en Fase 4 (checklist de lanzamiento) y solo en `Production`.
 - Si una clave se filtra: revocar/rotar en el Dashboard de Stripe (Roll key) y en Resend; Vercel redeploya al cambiarla.
+- **Tokens de `ship`/`revalidate` viajan por GET — riesgo aceptado**: `SHIP_NOTIFICATION_SECRET` y `STORE_REFRESH_SECRET` van en la URL (query string), así que aparecen en los logs de Vercel y en el historial del navegador de la dueña. Se acepta por usabilidad (la dueña solo hace clic en un enlace, sin formularios ni cabeceras) y porque el daño potencial es bajo (email de envío / refresco de caché, no dinero). **Procedimiento si se sospecha fuga**: rotar el secreto en las variables de entorno de Vercel (redeploya solo) y regenerar los enlaces guardados.
 - Regla de PR: ningún commit puede contener `sk_live`, `sk_test`, `whsec_` ni `re_` (grep en revisión; opcional hook de pre-commit).
 
 ---
 
 ## 4. Rate limiting en rutas API
 
-Contexto real (no hay Checkout Session hosted, ver ADR-002): las rutas/acciones con efectos son (1) el webhook, (2) `findOrCreateCartIdFromCookiesAction` (Server Action que crea el PaymentIntent/carrito), (3) `/api/orders/[paymentIntentId]/ship` (dispara email de envío) y (4) `/api/orders revalidate` (refresca el catálogo). Sin Redis/BD propios (presupuesto 0), la defensa es por capas:
+Contexto real (no hay Checkout Session hosted, ver ADR-002): las rutas/acciones con efectos son (1) el webhook, (2) `findOrCreateCartIdFromCookiesAction` (Server Action que crea el PaymentIntent/carrito), (3) `addToCartAction` (añade líneas y escribe metadata de personalización en el PaymentIntent), (4) `/api/orders/[paymentIntentId]/ship` (dispara email de envío) y (5) `/api/revalidate` (refresca el catálogo). Sin Redis/BD propios (presupuesto 0), la defensa es por capas:
 
 1. **Webhook**: no necesita rate limit clásico — la firma HMAC rechaza cualquier tráfico que no venga de Stripe con coste ~0. Devuelve 401 inmediato.
-2. **Creación de carrito/PaymentIntent, `ship` y `revalidate`**: limitador **best-effort en memoria** por IP, **implementado** en `src/lib/rate-limit.ts` y aplicado en los tres puntos (el coste del abuso es bajo: crear carritos no cobra dinero; `ship`/`revalidate` están además protegidos por un secreto compartido comparado en tiempo constante):
+2. **Creación de carrito/PaymentIntent, `addToCartAction`, `ship` y `revalidate`**: limitador **best-effort en memoria** por IP, **implementado** en `src/lib/rate-limit.ts` y aplicado en los cuatro puntos (el coste del abuso es bajo: crear carritos no cobra dinero; `ship`/`revalidate` están además protegidos por un secreto compartido comparado en tiempo constante):
 
 ```ts
 // src/lib/rate-limit.ts — best-effort por instancia serverless (sin dependencias).

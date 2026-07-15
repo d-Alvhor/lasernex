@@ -88,7 +88,17 @@ export const slugify = (text: string) => {
 
 export const capitalize = (str: string) => (str[0] ? str[0].toUpperCase() + str.slice(1) : "");
 
+// Mapa mínimo slug→nombre visible con tildes (los slugs/URLs no cambian).
+const deslugifyOverrides: Record<string, string> = {
+	decoracion: "Decoración",
+	organizacion: "Organización",
+};
+
 export const deslugify = (slug: string) => {
+	const override = deslugifyOverrides[slug.toLowerCase()];
+	if (override) {
+		return override;
+	}
 	return slug
 		.split("-")
 		.map((part) => capitalize(part))
