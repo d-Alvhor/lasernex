@@ -36,4 +36,4 @@ Esto es una vía de emergencia, no lo que usarás normalmente. Si el email de "N
    - **NUMERO_OPCIONAL**: si tienes número de seguimiento de la mensajería, ponlo aquí; si no, borra `&tracking=NUMERO_OPCIONAL` entero.
    - Si además tienes el **enlace de seguimiento** de la mensajería (la dirección web donde se ve el paquete), añade también `&trackingUrl=` con ese enlace: el cliente recibirá un botón clicable "Seguir el envío". Con solo `&tracking=`, el cliente ve el número, sin enlace.
 
-4. Al abrir el enlace verás un mensaje confirmando que el email se ha enviado al cliente. No hace falta contraseña ni iniciar sesión en nada.
+4. Al abrir el enlace verás una página con los datos del pedido y un botón **"Sí, marcar como enviado"**. Pulsa ese botón para enviar de verdad el email al cliente — es un paso más a propósito, para que abrir el enlace por accidente (o que lo abra un antivirus de correo) no le avise solo. No hace falta contraseña ni iniciar sesión en nada.

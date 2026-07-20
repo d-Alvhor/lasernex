@@ -15,7 +15,7 @@
 
    ![Formulario de creación de producto con Nombre/Descripción/Imágenes/Precio rellenos](/manual/capturas/02-formulario-relleno.png)
 
-5. Si el producto tiene **variantes** (color, tamaño): de momento, la forma sencilla es crear **un precio por variante** o **un producto por variante** (ej. "Producto de ejemplo — Azul", "Producto de ejemplo — Negro").
+5. Si el producto tiene **variantes** (color, tamaño): puedes hacerlo de dos formas — como productos totalmente aparte (ficha propia cada uno) o como una sola ficha con un selector (ver más abajo "Cómo hacer que un producto tenga variantes").
 6. Guarda. En la web de {storeName} normalmente aparece en segundos — la tienda se refresca sola. Si tarda en salir, abre el enlace de **"refrescar tienda"** que {contactoTecnico} te dejó guardado en marcadores.
 
 **Para retirar un producto** (se agotó el material, ya no lo haces): abre el producto en Stripe → **Archivar**. Desaparece de la web solo. Para volver a venderlo: **Desarchivar**.
@@ -31,12 +31,26 @@ Cuando ya has puesto Nombre, Descripción, Imágenes y Precio, en esa misma pant
 
 ⚠️ **Muy importante**: cuidado con las erratas. Si en un producto escribes `figuras` y en otro `figura` (o "Figuras" con mayúscula), la web creará **dos categorías distintas en el menú**, cada una con parte de los productos. No es grave ni se rompe nada: se arregla abriendo el producto equivocado y corrigiendo el **Valor** para que sea idéntico al del resto. Si ves una categoría duplicada o un producto que no sale donde esperabas, lo primero que hay que mirar es esto.
 
-### Dos casillas más, opcionales (no hacen falta para empezar)
+### Tres casillas más, opcionales (no hacen falta para empezar)
 
-Si quieres, puedes añadir dos parejas de Clave/Valor más, del mismo modo (clic en "+ Añadir" para que salga una casilla nueva):
+Si quieres, puedes añadir más parejas de Clave/Valor, del mismo modo (clic en "+ Añadir" para que salga una casilla nueva):
 
 - Clave `stock`, Valor un número (ej. `10`): la web pondrá "Agotado" automáticamente en cuanto se vendan esas 10 unidades — se va descontando solo, no tienes que tocar nada. Si no pones esta casilla, se entiende que nunca se agota.
 - Clave `order`, Valor un número (ej. `1`, `2`, `3`...): decide en qué orden salen los productos en la web. El número más bajo sale el primero.
 - Clave `preview`, Valor la etiqueta del campo que verá el cliente (ej. `Nombre a grabar`): convierte el producto en **personalizable** — en la web aparece un campo de texto **obligatorio** con esa etiqueta, y el cliente no puede comprarlo sin rellenarlo. Lo que escriba te llega con el pedido (ver la sección 2 del manual). Solo para productos que de verdad se personalizan; los demás, sin esta casilla.
+- Clave `variant`, Valor el nombre de la opción (ej. `azul`, `rojo`, o `s`, `m`, `l`): ver la sección siguiente, "Cómo hacer que un producto tenga variantes".
 
 No hace falta tocar nada más: la dirección web del producto (la parte de `/product/...`) se rellena sola a partir del Nombre en cuanto guardas.
+
+## Cómo hacer que un producto tenga variantes (color, tamaño) en una sola ficha
+
+Si un mismo artículo viene en varios colores o tamaños y quieres que el cliente los vea **todos juntos en una sola ficha**, con botones para cambiar de uno a otro (en vez de fichas sueltas), haz esto:
+
+1. Crea **un producto en Stripe por cada variante**, pero ponles a **todos exactamente el mismo Nombre** (ej. "Llavero gato" en los tres). Sí, el mismo Nombre en todos — es justo lo que hace que la web los reconozca como el mismo producto.
+2. En cada uno, añade la casilla de metadata `variant` con un valor distinto: por ejemplo `azul` en uno, `rojo` en otro, `verde` en el tercero. Usa palabras cortas y sin tildes, igual que con `category`.
+3. Cada variante puede tener su propio precio, sus propias fotos y su propio `stock` — no hace falta que sean iguales.
+4. Guarda los tres. En la web verás **una sola ficha** con botones para elegir "Azul / Rojo / Verde", cada uno con su foto y precio.
+
+⚠️ Si dos productos acaban con el mismo Nombre **por accidente** (un despiste, no porque sean variantes) y ninguno lleva la casilla `variant`, la web se da cuenta sola y no rompe nada: al segundo le añade automáticamente un "-2" al final de su dirección web para que ambos sigan funcionando. Pero puede quedar raro (dos fichas con el mismo Nombre visible, una en `/product/llavero-gato` y otra en `/product/llavero-gato-2`), así que si ves eso es señal de que algo se coló: o le pones un Nombre distinto a cada uno (si de verdad son productos independientes), o rellenas `variant` en los dos (si son variantes de lo mismo).
+
+Si prefieres la forma más simple de toda la vida (una ficha completamente aparte por cada color, con su propio Nombre distinto, ej. "Llavero gato azul" / "Llavero gato rojo"), eso también funciona perfectamente y no necesita la casilla `variant` para nada — es solo una opción más sencilla, sin el selector en una sola ficha.
