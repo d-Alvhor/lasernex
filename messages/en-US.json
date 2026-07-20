@@ -65,6 +65,7 @@
 	"/cart.page.summaryTable.totalCol": "Total",
 	"/cart.page.summaryTable.totalSummary": "TOTAL",
 	"/cart.page.stripePayment.fillRequiredFields": "Please fill in the required fields.",
+	"/cart.page.stripePayment.shippingRequired": "Choose a shipping method before paying.",
 	"/cart.page.stripePayment.unexpectedError": "An unexpected error occurred.",
 	"/cart.page.stripePayment.billingSameAsShipping": "Billing address same as shipping",
 	"/cart.page.stripePayment.billingSameAsPayment": "Billing address same as payment",

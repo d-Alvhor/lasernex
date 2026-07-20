@@ -65,6 +65,7 @@
 	"/cart.page.summaryTable.totalCol": "Total",
 	"/cart.page.summaryTable.totalSummary": "TOTAL",
 	"/cart.page.stripePayment.fillRequiredFields": "Por favor, rellena los campos obligatorios.",
+	"/cart.page.stripePayment.shippingRequired": "Elige un método de envío antes de pagar.",
 	"/cart.page.stripePayment.unexpectedError": "Se ha producido un error inesperado.",
 	"/cart.page.stripePayment.billingSameAsShipping": "La dirección de facturación coincide con la de envío",
 	"/cart.page.stripePayment.billingSameAsPayment": "La dirección de facturación coincide con la del pago",

@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 import { useTranslations } from "@/i18n/client";
 import { useDebouncedValue } from "@/lib/hooks";
+import { missingShippingSelection } from "@/lib/utils";
 import { saveBillingAddressAction, saveShippingRateAction } from "@/ui/checkout/checkout-actions";
 import { type AddressSchema, getAddressSchema } from "@/ui/checkout/checkout-form-schema";
 import { ShippingRatesSection } from "@/ui/checkout/shipping-rates-section";
@@ -124,6 +125,16 @@ const PaymentForm = ({
 			console.warn("Stripe or Elements not ready");
 			return;
 		}
+
+		// El importe del envío solo se añade al PaymentIntent cuando hay un
+		// shippingRateId guardado en el carrito (ver cartSaveShipping en
+		// commerce-kit): sin este bloqueo, el pago se confirma igual con el
+		// envío a 0€ si el cliente nunca llega a elegir un método.
+		if (missingShippingSelection({ allProductsDigital, shippingRateId })) {
+			setFormErrorMessage(t("shippingRequired"));
+			return;
+		}
+
 		const shippingAddressElement = elements.getElement("address");
 
 		if (!shippingAddressElement) {

@@ -112,6 +112,17 @@ export const formatProductName = (name: string, variant?: string) => {
 	return `${name} (${deslugify(variant)})`;
 };
 
+// El envío solo se suma al PaymentIntent cuando hay un shippingRateId
+// guardado en el carrito (cartSaveShipping de commerce-kit); sin este check
+// el checkout se puede confirmar con el envío a 0€ si nadie elige un método.
+export const missingShippingSelection = ({
+	allProductsDigital,
+	shippingRateId,
+}: {
+	allProductsDigital: boolean;
+	shippingRateId: string | null;
+}) => !allProductsDigital && !shippingRateId;
+
 export const calculateCartTotalPossiblyWithTax = (cart: {
 	cart: {
 		amount: number;
