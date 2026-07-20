@@ -19,6 +19,10 @@ export const JsonLd = <T extends Thing>({ jsonLd }: { jsonLd: WithContext<T> }) 
 
 export const mappedProductToJsonLd = (product: Commerce.MappedProduct): WithContext<Product> => {
 	const productName = formatProductName(product.name, product.metadata.variant);
+	// unit_amount es null en precios de "importe personalizado" de Stripe — la
+	// propia página ya trata ese caso como "sin precio fijo" (no muestra nada),
+	// así que el JSON-LD debe omitir price/priceCurrency en vez de mentir con 0€.
+	const hasFixedPrice = product.default_price.unit_amount != null;
 
 	return {
 		"@context": "https://schema.org",
@@ -31,11 +35,13 @@ export const mappedProductToJsonLd = (product: Commerce.MappedProduct): WithCont
 		offers: {
 			"@type": "Offer",
 			url: `${publicUrl}/product/${product.metadata.slug}`,
-			price: getDecimalFromStripeAmount({
-				amount: product.default_price.unit_amount ?? 0,
-				currency: product.default_price.currency,
+			...(hasFixedPrice && {
+				price: getDecimalFromStripeAmount({
+					amount: product.default_price.unit_amount ?? 0,
+					currency: product.default_price.currency,
+				}),
+				priceCurrency: product.default_price.currency,
 			}),
-			priceCurrency: product.default_price.currency,
 			availability:
 				product.metadata.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
 			// Envío a península y devolución de 14 días: política única de la tienda,

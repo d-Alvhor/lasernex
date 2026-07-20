@@ -19,7 +19,10 @@ export async function Footer() {
 	const sections = [
 		{
 			header: "Productos",
-			links: categories.map((slug) => ({ label: deslugify(slug), href: `/category/${slug}` })),
+			links: categories.map((slug) => ({
+				label: deslugify(slug),
+				href: `/category/${encodeURIComponent(slug)}`,
+			})),
 		},
 		{
 			header: "Sobre Lasernex",

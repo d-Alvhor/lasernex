@@ -124,7 +124,7 @@ export default async function SingleProductPage(props: {
 							<BreadcrumbSeparator />
 							<BreadcrumbItem>
 								<BreadcrumbLink asChild>
-									<YnsLink href={`/category/${category}`}>{deslugify(category)}</YnsLink>
+									<YnsLink href={`/category/${encodeURIComponent(category)}`}>{deslugify(category)}</YnsLink>
 								</BreadcrumbLink>
 							</BreadcrumbItem>
 						</>

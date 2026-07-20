@@ -45,9 +45,9 @@ Te llegarán **dos emails** por cada venta: uno de **Stripe** avisando del pago,
 2. Haz clic en el pago para ver el detalle completo (productos, dirección, email del cliente).
 3. **Si el producto era personalizado**: el texto que escribió el cliente aparece destacado con ✏️ en el email "Nuevo pedido" (justo debajo del nombre del producto), y también en el propio pago dentro de Stripe, bajando hasta la sección **Metadatos** del pago (busca una clave que empieza por `personalization_`). Revísalo antes de fabricar la pieza.
 4. Fabrica/prepara el paquete y envíalo por mensajería.
-5. Cuando lo envíes, abre el email **"Nuevo pedido"** de esa venta y pulsa **"Marcar como enviado"**. Eso dispara al cliente el email de "tu pedido ya va de camino".
+5. Cuando lo envíes, abre el email **"Nuevo pedido"** de esa venta y pulsa **"Marcar como enviado"**. Se abre una página con los datos del pedido y un botón **"Sí, marcar como enviado"** — dos clics en vez de uno a propósito, para que un simple vistazo automático al enlace (por ejemplo, un antivirus de correo) no dispare el aviso al cliente sin que tú lo hayas confirmado. Al pulsar ese botón sí se envía el email de "tu pedido ya va de camino".
 
-   **Para añadir el número de seguimiento** (opcional): antes de pulsar, puedes editar esa URL y añadir al final `&tracking=1234567890` (el número tal cual) y `&trackingUrl=https://...` (el enlace de seguimiento de la mensajería). Si pones `trackingUrl`, el cliente recibe un enlace clicable "Seguir el envío" en su email; con solo `tracking` ve el número, sin enlace.
+   **Para añadir el número de seguimiento** (opcional): antes de pulsar el enlace del email, puedes editar esa URL y añadir al final `&tracking=1234567890` (el número tal cual) y `&trackingUrl=https://...` (el enlace de seguimiento de la mensajería). Si pones `trackingUrl`, el cliente recibe un enlace clicable "Seguir el envío" en su email; con solo `tracking` ve el número, sin enlace.
 
    **Si ese email no te llegó** (mira spam) puedes construir el enlace tú misma, pegando esto en la barra de tu navegador:
 
@@ -58,7 +58,7 @@ Te llegarán **dos emails** por cada venta: uno de **Stripe** avisando del pago,
    - **EL_ID_DEL_PAGO**: lo copias de la URL del pago en el Dashboard de Stripe (empieza por `pi_...`).
    - **TU_SECRETO**: el código que se configuró una vez al lanzar la tienda (pregúntale a Álvaro si no lo tienes).
 
-   Al abrir el enlace verás un mensaje confirmando que el email se ha enviado. No hace falta contraseña ni iniciar sesión en nada.
+   Al abrir el enlace verás la página de confirmación del pedido; pulsa el botón para enviar de verdad el email. No hace falta contraseña ni iniciar sesión en nada.
 
 Consejo: usa la vista **Pagos** como tu lista de tareas — lo de arriba es lo más nuevo. Si un día hay mucho movimiento, apúntate en una libreta o nota del móvil cuáles ya enviaste.
 

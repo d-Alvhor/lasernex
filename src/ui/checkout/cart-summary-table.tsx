@@ -79,7 +79,11 @@ export const CartSummaryTable = ({ cart, locale }: { cart: Commerce.Cart; locale
 								<TableCell className="font-medium">
 									<YnsLink
 										className="transition-colors hover:text-muted-foreground"
-										href={`/product/${line.product.metadata.slug}`}
+										href={
+											line.product.metadata.variant
+												? `/product/${line.product.metadata.slug}?variant=${line.product.metadata.variant}`
+												: `/product/${line.product.metadata.slug}`
+										}
 									>
 										{formatProductName(line.product.name, line.product.metadata.variant)}
 									</YnsLink>
@@ -103,14 +107,12 @@ export const CartSummaryTable = ({ cart, locale }: { cart: Commerce.Cart; locale
 												{line.quantity}
 											</span>
 											<CartItemRemoveButton
-												cartId={cart.cart.id}
 												productId={line.product.id}
 												productName={formatProductName(line.product.name, line.product.metadata.variant)}
 											/>
 										</span>
 									) : (
 										<CartItemQuantity
-											cartId={cart.cart.id}
 											quantity={line.quantity}
 											productId={line.product.id}
 											productName={formatProductName(line.product.name, line.product.metadata.variant)}

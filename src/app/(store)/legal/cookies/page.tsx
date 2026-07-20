@@ -37,10 +37,13 @@ export default function CookiesPage() {
 						<td>Sesión / 30 días</td>
 					</tr>
 					<tr>
-						<td>Cookies de Stripe en checkout.stripe.com</td>
+						<td>Cookies de Stripe (js.stripe.com, m.stripe.network)</td>
 						<td>Técnicas, de Stripe</td>
-						<td>Prevención de fraude y proceso de pago</td>
-						<td>Según Stripe (dominio propio de Stripe)</td>
+						<td>
+							Prevención de fraude y proceso de pago — el formulario de pago se muestra dentro de esta misma
+							página con Stripe Elements, sin redirigirte a otra web
+						</td>
+						<td>Según Stripe (dominios propios de Stripe)</td>
 					</tr>
 				</tbody>
 			</table>

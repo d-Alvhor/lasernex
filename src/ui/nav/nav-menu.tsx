@@ -10,7 +10,7 @@ export const NavMenu = async () => {
 	const categories = (await Commerce.categoryBrowse()).sort((a, b) => a.localeCompare(b, "es"));
 	const links = [
 		{ label: "Inicio", href: "/" },
-		...categories.map((slug) => ({ label: deslugify(slug), href: `/category/${slug}` })),
+		...categories.map((slug) => ({ label: deslugify(slug), href: `/category/${encodeURIComponent(slug)}` })),
 	];
 
 	return (

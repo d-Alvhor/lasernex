@@ -11,6 +11,14 @@ export const size = {
 export const contentType = "image/png";
 export const alt = "";
 
+// LIMITACIÓN ACEPTADA (no arreglable sin una ruta propia fuera de esta
+// convención de fichero de Next.js): opengraph-image no recibe searchParams,
+// así que si se comparte el enlace de una variante concreta (?variant=azul)
+// la miniatura de vista previa sigue mostrando la variante por defecto de
+// `product` (la misma que ve la ficha sin ese parámetro), no la variante
+// exacta enlazada. Solo afecta a la FOTO/precio de la vista previa al
+// compartir; el enlace en sí lleva a la variante correcta. Bajo impacto,
+// cosmético — no justifica una ruta de imagen parametrizada aparte.
 export default async function Image(props: { params: Promise<{ slug: string }> }) {
 	const params = await props.params;
 	const locale = await getLocale();

@@ -23,7 +23,7 @@ export const generateMetadata = async (props: {
 
 	return {
 		title: t("title", { categoryName: deslugify(params.slug) }),
-		alternates: { canonical: `${publicUrl}/category/${params.slug}` },
+		alternates: { canonical: `${publicUrl}/category/${encodeURIComponent(params.slug)}` },
 	};
 };
 

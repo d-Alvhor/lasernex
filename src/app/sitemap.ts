@@ -20,7 +20,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 	const categoryUrls = categories.map(
 		(slug) =>
 			({
-				url: `${publicUrl}/category/${slug}`,
+				// metadata.category es texto libre que la dueña escribe en Stripe
+				// (sin pasar por slugify, a diferencia del slug de producto) — puede
+				// llevar espacios/tildes/mayúsculas, así que hay que codificarlo para
+				// que la URL sea válida.
+				url: `${publicUrl}/category/${encodeURIComponent(slug)}`,
 				lastModified: new Date(),
 				changeFrequency: "daily",
 				priority: 0.5,

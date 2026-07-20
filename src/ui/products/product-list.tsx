@@ -20,9 +20,19 @@ export const ProductList = async ({ products }: { products: Commerce.MappedProdu
 								locale,
 							})
 						: null;
+					// La ficha elige su variante por defecto con su propio criterio
+					// (metadata.order o, si falta, la editada más recientemente), que
+					// puede no coincidir con la variante que este listado decide
+					// mostrar para el slug (commerce-kit dedupea por separado). Fijar
+					// ?variant= aquí garantiza que la ficha abre EXACTAMENTE la
+					// variante que la tarjeta enseña — mismo patrón que ya usa el
+					// selector de variantes dentro de la propia ficha.
+					const href = product.metadata.variant
+						? `/product/${product.metadata.slug}?variant=${product.metadata.variant}`
+						: `/product/${product.metadata.slug}`;
 					return (
 						<li key={product.id} className="group">
-							<YnsLink href={`/product/${product.metadata.slug}`} className="block">
+							<YnsLink href={href} className="block">
 								<ProductPlacard product={product} priceFormatted={priceFormatted} />
 							</YnsLink>
 						</li>

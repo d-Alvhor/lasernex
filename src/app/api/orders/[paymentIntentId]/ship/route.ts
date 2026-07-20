@@ -24,11 +24,9 @@ function safeTokenEqual(a: string, b: string): boolean {
 	return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
 }
 
-// Enlace que la dueña puede guardar en marcadores y abrir cuando envía un
-// pedido (ver OPERATIONS.md). No hay panel de administración propio
-// (ADR-003): un único secreto compartido protege esta acción, no una cuenta
-// de usuario. GET en vez de POST a propósito: tiene que poder abrirse
-// simplemente pegando/pulsando un enlace, sin formularios ni JavaScript.
+// Enlace que la dueña guarda en marcadores/recibe por email (ver OPERATIONS.md).
+// No hay panel de administración propio (ADR-003): un único secreto compartido
+// protege esta acción, no una cuenta de usuario.
 const querySchema = z.object({
 	token: z.string().min(1),
 	tracking: z.string().max(100).optional(),
@@ -41,14 +39,27 @@ const htmlResponse = (message: string, status: number) =>
 		{ status, headers: { "Content-Type": "text/html; charset=utf-8" } },
 	);
 
-export async function GET(request: Request, props: { params: Promise<{ paymentIntentId: string }> }) {
+function checkEnvAndRateLimit(request: Request): NextResponse | null {
 	if (!env.SHIP_NOTIFICATION_SECRET) {
 		return htmlResponse("SHIP_NOTIFICATION_SECRET no está configurado en el servidor.", 500);
 	}
-
 	const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 	if (!rateLimit(ip)) {
 		return htmlResponse("Demasiados intentos. Espera un minuto y vuelve a intentarlo.", 429);
+	}
+	return null;
+}
+
+// GET solo MUESTRA una página de confirmación, sin efectos: un escáner de
+// seguridad de email o una vista previa de enlace de una app de chat puede
+// visitar la URL automáticamente en cuanto llega el correo, y con el GET
+// antiguo eso disparaba el aviso de "enviado" al cliente sin que Carla
+// hubiera hecho nada. El envío real solo ocurre en el POST del botón, que
+// exige un clic real — sigue sin hacer falta JavaScript, es un <form> normal.
+export async function GET(request: Request, props: { params: Promise<{ paymentIntentId: string }> }) {
+	const earlyResponse = checkEnvAndRateLimit(request);
+	if (earlyResponse) {
+		return earlyResponse;
 	}
 
 	const { paymentIntentId } = await props.params;
@@ -59,7 +70,60 @@ export async function GET(request: Request, props: { params: Promise<{ paymentIn
 		return htmlResponse("Enlace inválido: faltan parámetros.", 400);
 	}
 
-	if (!safeTokenEqual(parsed.data.token, env.SHIP_NOTIFICATION_SECRET)) {
+	if (!safeTokenEqual(parsed.data.token, env.SHIP_NOTIFICATION_SECRET!)) {
+		return htmlResponse("Enlace no autorizado.", 401);
+	}
+
+	const order = await Commerce.orderGet(paymentIntentId);
+	const email = order?.order.latest_charge?.billing_details?.email;
+
+	if (!order || !email) {
+		return htmlResponse(
+			`No se ha encontrado el pedido ${escapeHtml(paymentIntentId)} o no tiene email asociado.`,
+			404,
+		);
+	}
+
+	const customerName = order.order.shipping?.name ?? order.order.latest_charge?.billing_details?.name ?? "";
+	const hiddenFields = [
+		`<input type="hidden" name="token" value="${escapeHtml(parsed.data.token)}" />`,
+		parsed.data.tracking
+			? `<input type="hidden" name="tracking" value="${escapeHtml(parsed.data.tracking)}" />`
+			: "",
+		parsed.data.trackingUrl
+			? `<input type="hidden" name="trackingUrl" value="${escapeHtml(parsed.data.trackingUrl)}" />`
+			: "",
+	].join("");
+
+	return new NextResponse(
+		`<!doctype html><html lang="es"><body style="font-family: sans-serif; padding: 2rem; max-width: 480px; margin: 0 auto;">
+			<p>¿Marcar como enviado el pedido <strong>${escapeHtml(order.order.id)}</strong>${
+				customerName ? ` de ${escapeHtml(customerName)}` : ""
+			} y avisar por email a ${escapeHtml(email)}?</p>
+			<form method="POST">
+				${hiddenFields}
+				<button type="submit" style="font-size:1.1rem;padding:.75rem 1.5rem;cursor:pointer;">Sí, marcar como enviado</button>
+			</form>
+		</body></html>`,
+		{ status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } },
+	);
+}
+
+export async function POST(request: Request, props: { params: Promise<{ paymentIntentId: string }> }) {
+	const earlyResponse = checkEnvAndRateLimit(request);
+	if (earlyResponse) {
+		return earlyResponse;
+	}
+
+	const { paymentIntentId } = await props.params;
+	const formData = await request.formData();
+	const parsed = querySchema.safeParse(Object.fromEntries(formData));
+
+	if (!parsed.success) {
+		return htmlResponse("Enlace inválido: faltan parámetros.", 400);
+	}
+
+	if (!safeTokenEqual(parsed.data.token, env.SHIP_NOTIFICATION_SECRET!)) {
 		return htmlResponse("Enlace no autorizado.", 401);
 	}
 
