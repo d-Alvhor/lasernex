@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useTranslations } from "@/i18n/client";
 import { useDebouncedValue } from "@/lib/hooks";
 import { missingShippingSelection } from "@/lib/utils";
+import { useCartMutation } from "@/ui/checkout/cart-mutation-context";
 import { saveBillingAddressAction, saveShippingRateAction } from "@/ui/checkout/checkout-actions";
 import { type AddressSchema, getAddressSchema } from "@/ui/checkout/checkout-form-schema";
 import { ShippingRatesSection } from "@/ui/checkout/shipping-rates-section";
@@ -69,6 +70,7 @@ const PaymentForm = ({
 		line1Required: ft("line1Required"),
 		nameRequired: ft("nameRequired"),
 		postalCodeRequired: ft("postalCodeRequired"),
+		onlyPeninsularSpain: ft("onlyPeninsularSpain"),
 	});
 
 	const [formErrorMessage, setFormErrorMessage] = useState<string | null>(null);
@@ -89,7 +91,6 @@ const PaymentForm = ({
 		postalCode: "",
 		state: "",
 		phone: "",
-		taxId: "",
 		email: "",
 	});
 
@@ -98,9 +99,16 @@ const PaymentForm = ({
 
 	const [sameAsShipping, setSameAsShipping] = useState(true);
 	const [email, setEmail] = useState("");
+	// Independiente de billingAddressValues a propósito: si viviera dentro del
+	// objeto de dirección, cada cambio en la dirección de envío (con "misma
+	// dirección" marcado) lo borraba sin que el cliente lo notara — y además
+	// era invisible salvo que desmarcara esa casilla (nadie lo hace por
+	// defecto), así que casi ningún NIF/CIF llegaba a la factura.
+	const [taxId, setTaxId] = useState("");
 
 	const stripe = useStripe();
 	const router = useRouter();
+	const { isMutating } = useCartMutation();
 
 	// elements are mutable and can change during the lifecycle of the component
 	// keep a mutable ref so that useEffects are not triggered when elements change
@@ -132,6 +140,14 @@ const PaymentForm = ({
 		// envío a 0€ si el cliente nunca llega a elegir un método.
 		if (missingShippingSelection({ allProductsDigital, shippingRateId })) {
 			setFormErrorMessage(t("shippingRequired"));
+			return;
+		}
+
+		// Si hay un cambio de cantidad del carrito en vuelo (stepper +/-, ver
+		// cart-mutation-context.tsx), esperar a que termine antes de cobrar:
+		// si no, se podía confirmar el pago con el importe de ANTES del cambio.
+		if (isMutating) {
+			setFormErrorMessage(t("cartUpdating"));
 			return;
 		}
 
@@ -177,11 +193,14 @@ const PaymentForm = ({
 			}
 
 			setIsLoading(true);
-			if (validatedBillingAddress.data.taxId) {
-				await saveTaxIdAction({
-					taxId: validatedBillingAddress.data.taxId,
-				});
+			if (taxId.trim()) {
+				await saveTaxIdAction({ taxId: taxId.trim() });
 			}
+
+			// Última comprobación de frescura justo antes de cobrar: si algo
+			// tocó el carrito por una vía que no pasa por el contexto de
+			// isMutating, esto sigue asegurando que Stripe cobra el importe real.
+			await elements.fetchUpdates();
 
 			const result = await stripe.confirmPayment({
 				elements,
@@ -252,8 +271,13 @@ const PaymentForm = ({
 			<AddressElement
 				options={{
 					mode: "shipping",
+					// Por ahora solo se envía a España peninsular (ver
+					// /legal/condiciones) — Baleares/Canarias/Ceuta/Melilla se
+					// filtran aparte por código postal en getAddressSchema, ya que
+					// Stripe solo deja restringir por país aquí, no por región.
+					allowedCountries: ["ES"],
 					fields: { phone: "always" },
-					validation: { phone: { required: "auto" } },
+					validation: { phone: { required: "always" } },
 				}}
 				onChange={(e) => {
 					// do not override billing address if it's manually edited
@@ -274,12 +298,24 @@ const PaymentForm = ({
 						postalCode: e.value.address.postal_code,
 						state: e.value.address.state ?? null,
 						phone: e.value.phone ?? null,
-						taxId: "",
 						email: email,
 					});
 				}}
 				onReady={() => setIsAddressReady(true)}
 			/>
+
+			{readyToRender && (
+				<InputWithErrors
+					label={t("taxId")}
+					name="taxId"
+					value={taxId}
+					onChange={(e) => setTaxId(e.currentTarget.value)}
+					placeholder={t("taxIdPlaceholder")}
+					autoComplete=""
+					className="w-full"
+					errors={null}
+				/>
+			)}
 
 			{readyToRender && !allProductsDigital && (
 				<ShippingRatesSection
@@ -370,14 +406,14 @@ const PaymentForm = ({
 						type="submit"
 						className="w-full rounded-full text-lg"
 						size="lg"
-						aria-disabled={isBillingAddressPending || isLoading || isTransitioning}
+						aria-disabled={isBillingAddressPending || isLoading || isTransitioning || isMutating}
 						onClick={(e) => {
-							if (isBillingAddressPending || isLoading || isTransitioning) {
+							if (isBillingAddressPending || isLoading || isTransitioning || isMutating) {
 								e.preventDefault();
 							}
 						}}
 					>
-						{isBillingAddressPending || isLoading || isTransitioning ? (
+						{isBillingAddressPending || isLoading || isTransitioning || isMutating ? (
 							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 						) : (
 							t("payNowButton")
@@ -483,18 +519,6 @@ const BillingAddressSection = ({
 				defaultValue={values.phone ?? undefined}
 				autoComplete="shipping tel"
 				type="tel"
-				className="mt-3 w-full"
-				errors={errors}
-				onChange={onFieldChange}
-			/>
-			<InputWithErrors
-				// required
-				label={t("taxId")}
-				name="taxId"
-				defaultValue={values.taxId ?? undefined}
-				autoComplete=""
-				placeholder={t("taxIdPlaceholder")}
-				type="text"
 				className="mt-3 w-full"
 				errors={errors}
 				onChange={onFieldChange}

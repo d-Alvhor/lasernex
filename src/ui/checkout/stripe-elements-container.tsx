@@ -2,6 +2,7 @@
 
 import { env } from "@/env.mjs";
 import { invariant } from "@/lib/invariant";
+import { CartMutationProvider } from "@/ui/checkout/cart-mutation-context";
 import { Elements } from "@stripe/react-stripe-js";
 import { type StripeElementLocale, type StripeElementsOptions, loadStripe } from "@stripe/stripe-js";
 import { type ReactNode, useMemo } from "react";
@@ -46,7 +47,7 @@ export const StripeElementsContainer = ({
 
 	return (
 		<Elements stripe={stripePromise} options={options}>
-			{children}
+			<CartMutationProvider>{children}</CartMutationProvider>
 		</Elements>
 	);
 };

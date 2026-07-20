@@ -27,5 +27,11 @@ export const saveBillingAddressAction = async ({
 		throw new Error("No cart id found in cookies");
 	}
 
-	await Commerce.cartSaveBillingAddress({ cartId: cart.cart.id, billingAddress });
+	// cartSaveBillingAddress (commerce-kit) exige taxId en el tipo pero no lo
+	// usa en absoluto en su implementación — el NIF/CIF real viaja aparte por
+	// cartSaveTax (ver tax-action.ts). Se pasa null solo para satisfacer el tipo.
+	await Commerce.cartSaveBillingAddress({
+		cartId: cart.cart.id,
+		billingAddress: { ...billingAddress, taxId: null },
+	});
 };
