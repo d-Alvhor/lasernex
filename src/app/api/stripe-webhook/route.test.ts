@@ -22,7 +22,9 @@ vi.mock("next/cache", () => ({
 
 const constructEventAsync = vi.fn();
 const productsUpdate = vi.fn();
+const productsList = vi.fn();
 const paymentIntentsUpdate = vi.fn();
+const paymentIntentsRetrieve = vi.fn();
 const taxTransactionsCreateFromCalculation = vi.fn();
 
 // No usamos importOriginal: el módulo real de commerce-kit importa "next/cache"
@@ -34,8 +36,8 @@ vi.mock("commerce-kit", () => ({
 	orderGet: vi.fn(),
 	provider: vi.fn(() => ({
 		webhooks: { constructEventAsync },
-		products: { update: productsUpdate },
-		paymentIntents: { update: paymentIntentsUpdate },
+		products: { update: productsUpdate, list: productsList },
+		paymentIntents: { update: paymentIntentsUpdate, retrieve: paymentIntentsRetrieve },
 		tax: { transactions: { createFromCalculation: taxTransactionsCreateFromCalculation } },
 	})),
 }));
@@ -121,6 +123,10 @@ describe("POST /api/stripe-webhook — payment_intent.succeeded", () => {
 		constructEventAsync.mockImplementation(async (_body: string) => JSON.parse(_body));
 		vi.mocked(Commerce.orderGet).mockResolvedValue(null);
 		vi.mocked(Commerce.getProductsFromMetadata).mockResolvedValue([]);
+		// Por defecto, el PaymentIntent "en vivo" (el que se comprueba para la
+		// idempotencia) todavía no tiene stock_processed — cada test que quiera
+		// simular el caso "ya procesado" lo sobreescribe explícitamente.
+		paymentIntentsRetrieve.mockResolvedValue({ metadata: {} });
 	});
 
 	afterEach(() => {
@@ -153,18 +159,45 @@ describe("POST /api/stripe-webhook — payment_intent.succeeded", () => {
 		expect(paymentIntentsUpdate).toHaveBeenCalledWith("pi_inf", { metadata: { stock_processed: "1" } });
 	});
 
-	it("si stock_processed ya existe, no vuelve a descontar stock ni a llamar paymentIntents.update con stock_processed", async () => {
+	it("si el PaymentIntent EN VIVO ya tiene stock_processed, no vuelve a descontar stock", async () => {
 		// Aislamos de las llamadas de paymentIntents.update de la parte de emails/receipt_email
 		// haciendo que orderGet no encuentre pedido.
 		vi.mocked(Commerce.orderGet).mockResolvedValue(null);
 		vi.mocked(Commerce.getProductsFromMetadata).mockResolvedValue([
 			{ product: buildProduct({ id: "prod_a", stock: 10 }), quantity: 3 },
 		]);
+		paymentIntentsRetrieve.mockResolvedValue({ metadata: { stock_processed: "1" } });
 
-		await POST(buildRequest(buildEvent({ paymentIntentId: "pi_dup", metadata: { stock_processed: "1" } })));
+		await POST(buildRequest(buildEvent({ paymentIntentId: "pi_dup" })));
 
 		expect(productsUpdate).not.toHaveBeenCalled();
 		expect(paymentIntentsUpdate).not.toHaveBeenCalled();
+	});
+
+	it("reenvío del mismo evento (snapshot sin stock_processed) no repite el descuento si el PaymentIntent en vivo ya lo tiene", async () => {
+		// Este es exactamente el escenario del bug: event.data.object.metadata es
+		// un snapshot SIN stock_processed (como llegaría en un reenvío de Stripe
+		// del evento original), pero el PaymentIntent real ya se marcó procesado
+		// entre medias. La idempotencia debe mirar el estado en vivo, no el evento.
+		vi.mocked(Commerce.orderGet).mockResolvedValue(null);
+		vi.mocked(Commerce.getProductsFromMetadata).mockResolvedValue([
+			{ product: buildProduct({ id: "prod_a", stock: 10 }), quantity: 3 },
+		]);
+		paymentIntentsRetrieve.mockResolvedValue({ metadata: { stock_processed: "1" } });
+
+		await POST(buildRequest(buildEvent({ paymentIntentId: "pi_retry", metadata: {} })));
+
+		expect(productsUpdate).not.toHaveBeenCalled();
+	});
+
+	it("nunca deja el stock en negativo aunque la cantidad comprada supere el stock leído", async () => {
+		vi.mocked(Commerce.getProductsFromMetadata).mockResolvedValue([
+			{ product: buildProduct({ id: "prod_over", stock: 1 }), quantity: 3 },
+		]);
+
+		await POST(buildRequest(buildEvent({ paymentIntentId: "pi_over" })));
+
+		expect(productsUpdate).toHaveBeenCalledWith("prod_over", { metadata: { stock: 0 } });
 	});
 
 	it("llama al email interno (dueña) ANTES que al de confirmación (cliente)", async () => {
@@ -211,5 +244,128 @@ describe("POST /api/stripe-webhook — payment_intent.succeeded", () => {
 			// @ts-expect-error -- restaurar para no filtrar estado a otros tests
 			env.SHIP_NOTIFICATION_SECRET = "ship-secret";
 		}
+	});
+});
+
+describe("POST /api/stripe-webhook — charge.refunded", () => {
+	beforeEach(() => {
+		constructEventAsync.mockImplementation(async (_body: string) => JSON.parse(_body));
+		vi.mocked(Commerce.getProductsFromMetadata).mockResolvedValue([
+			{ product: buildProduct({ id: "prod_a", stock: 4 }), quantity: 2 },
+		]);
+	});
+
+	afterEach(() => {
+		vi.clearAllMocks();
+	});
+
+	function buildRefundEvent({
+		paymentIntentId = "pi_refund",
+		refunded = true,
+	}: {
+		paymentIntentId?: string;
+		refunded?: boolean;
+	}) {
+		return {
+			type: "charge.refunded",
+			data: {
+				object: {
+					id: "ch_1",
+					refunded,
+					payment_intent: paymentIntentId,
+				},
+			},
+		};
+	}
+
+	it("reembolso total: devuelve al stock la cantidad de cada línea del pedido original", async () => {
+		paymentIntentsRetrieve.mockResolvedValue({ metadata: { stock_processed: "1" } });
+
+		await POST(buildRequest(buildRefundEvent({ paymentIntentId: "pi_refund_ok" })));
+
+		expect(productsUpdate).toHaveBeenCalledWith("prod_a", { metadata: { stock: 6 } });
+		expect(paymentIntentsUpdate).toHaveBeenCalledWith("pi_refund_ok", {
+			metadata: { stock_restored: "1" },
+		});
+	});
+
+	it("reembolso parcial (refunded=false): no toca el stock", async () => {
+		paymentIntentsRetrieve.mockResolvedValue({ metadata: { stock_processed: "1" } });
+
+		await POST(buildRequest(buildRefundEvent({ paymentIntentId: "pi_partial", refunded: false })));
+
+		expect(productsUpdate).not.toHaveBeenCalled();
+		expect(paymentIntentsRetrieve).not.toHaveBeenCalled();
+	});
+
+	it("si el stock ya se devolvió para este pago, no lo devuelve dos veces", async () => {
+		paymentIntentsRetrieve.mockResolvedValue({ metadata: { stock_processed: "1", stock_restored: "1" } });
+
+		await POST(buildRequest(buildRefundEvent({ paymentIntentId: "pi_already_restored" })));
+
+		expect(productsUpdate).not.toHaveBeenCalled();
+	});
+
+	it("si el pago original nunca descontó stock (sin stock_processed), no hay nada que devolver", async () => {
+		paymentIntentsRetrieve.mockResolvedValue({ metadata: {} });
+
+		await POST(buildRequest(buildRefundEvent({ paymentIntentId: "pi_never_processed" })));
+
+		expect(productsUpdate).not.toHaveBeenCalled();
+	});
+});
+
+describe("POST /api/stripe-webhook — product.created (auto-slug)", () => {
+	beforeEach(() => {
+		constructEventAsync.mockImplementation(async (_body: string) => JSON.parse(_body));
+	});
+
+	afterEach(() => {
+		vi.clearAllMocks();
+	});
+
+	function buildProductEvent({
+		id = "prod_new",
+		name = "Llavero Gato",
+		metadata = {},
+	}: {
+		id?: string;
+		name?: string;
+		metadata?: Record<string, string>;
+	}) {
+		return {
+			type: "product.created",
+			data: { object: { id, name, active: true, metadata } },
+		};
+	}
+
+	it("sin colisión: usa el slug tal cual sale de slugify", async () => {
+		productsList.mockResolvedValue({ data: [], has_more: false });
+
+		await POST(buildRequest(buildProductEvent({ id: "prod_new" })));
+
+		expect(productsUpdate).toHaveBeenCalledWith("prod_new", { metadata: { slug: "llavero-gato" } });
+	});
+
+	it("con colisión de slug entre dos productos SIN variant: añade un sufijo numérico", async () => {
+		productsList.mockResolvedValue({
+			data: [{ id: "prod_existing", metadata: { slug: "llavero-gato" } }],
+			has_more: false,
+		});
+
+		await POST(buildRequest(buildProductEvent({ id: "prod_new" })));
+
+		expect(productsUpdate).toHaveBeenCalledWith("prod_new", { metadata: { slug: "llavero-gato-2" } });
+	});
+
+	it("si el producto nuevo es una variante intencionada (metadata.variant), NO desambigua el slug", async () => {
+		productsList.mockResolvedValue({
+			data: [{ id: "prod_existing", metadata: { slug: "llavero-gato" } }],
+			has_more: false,
+		});
+
+		await POST(buildRequest(buildProductEvent({ id: "prod_new", metadata: { variant: "azul" } })));
+
+		expect(productsUpdate).toHaveBeenCalledWith("prod_new", { metadata: { slug: "llavero-gato" } });
 	});
 });

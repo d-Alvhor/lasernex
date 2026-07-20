@@ -5,6 +5,9 @@ import config from "@/store.config";
 import * as Commerce from "commerce-kit";
 import { cartMetadataSchema } from "commerce-kit/internal";
 import { revalidateTag } from "next/cache";
+import type Stripe from "stripe";
+
+type StripeClient = ReturnType<typeof Commerce.provider>;
 
 // Genera un slug url-amigable a partir del nombre del producto.
 // Sirve para que la dueña NO tenga que rellenar el metadato `slug` a mano en
@@ -18,6 +21,59 @@ function slugify(text: string): string {
 		.replace(/[^a-z0-9]+/g, "-")
 		.replace(/^-+|-+$/g, "")
 		.slice(0, 60);
+}
+
+// Todos los productos activos sin deduplicar por slug (a diferencia de
+// Commerce.productBrowse, que sí dedupea) y paginando de verdad — hace falta
+// sin dedupe para poder detectar colisiones de slug entre productos distintos.
+async function listAllActiveProductsRaw(stripe: StripeClient): Promise<Stripe.Product[]> {
+	const products: Stripe.Product[] = [];
+	let startingAfter: string | undefined;
+	do {
+		const page = await stripe.products.list({ active: true, limit: 100, starting_after: startingAfter });
+		products.push(...page.data);
+		startingAfter = page.has_more ? page.data.at(-1)?.id : undefined;
+	} while (startingAfter);
+	return products;
+}
+
+// Evita que dos productos con nombre igual (o muy parecido) acaben con el
+// mismo slug autogenerado si ninguno de los dos es una variante intencionada
+// (metadata.variant): sin esto, el segundo producto rompe su propia ficha
+// (commerce-kit lanza "Multiple products found...") y desaparece en silencio
+// del listado (que dedupea por slug quedándose con el primero que encuentra).
+async function resolveUniqueSlug({
+	stripe,
+	baseSlug,
+	currentProductId,
+	hasVariant,
+}: {
+	stripe: StripeClient;
+	baseSlug: string;
+	currentProductId: string;
+	hasVariant: boolean;
+}): Promise<string> {
+	if (hasVariant) {
+		return baseSlug;
+	}
+
+	const existing = await listAllActiveProductsRaw(stripe);
+	const takenSlugs = new Set(
+		existing
+			.filter((p) => p.id !== currentProductId && !p.metadata?.variant)
+			.map((p) => p.metadata?.slug)
+			.filter(Boolean),
+	);
+
+	if (!takenSlugs.has(baseSlug)) {
+		return baseSlug;
+	}
+
+	let suffix = 2;
+	while (takenSlugs.has(`${baseSlug}-${suffix}`)) {
+		suffix += 1;
+	}
+	return `${baseSlug}-${suffix}`;
 }
 
 export async function POST(request: Request) {
@@ -60,7 +116,13 @@ export async function POST(request: Request) {
 
 			// Idempotencia: Stripe puede reenviar el mismo evento (SECURITY.md §2 exige
 			// tolerar duplicados) — si el stock de este pago ya se descontó, no repetirlo.
-			if (event.data.object.metadata.stock_processed) {
+			// Se comprueba contra el PaymentIntent EN VIVO, no contra
+			// event.data.object.metadata (un snapshot congelado en el instante en que
+			// Stripe generó este evento): un reenvío del MISMO evento seguiría viendo
+			// ese snapshot como "sin procesar" aunque ya hubiéramos marcado el
+			// PaymentIntent real como procesado, y se repetiría el descuento de stock.
+			const livePaymentIntent = await stripe.paymentIntents.retrieve(event.data.object.id);
+			if (livePaymentIntent.metadata.stock_processed) {
 				console.warn("Stock ya descontado para este pago, se omite el decremento", {
 					paymentIntentId: event.data.object.id,
 				});
@@ -71,13 +133,25 @@ export async function POST(request: Request) {
 					if (product && product.metadata.stock !== Infinity) {
 						await stripe.products.update(product.id, {
 							metadata: {
-								stock: product.metadata.stock - quantity,
+								// Nunca negativo: dos ventas casi simultáneas de la misma pieza
+								// podrían restar dos veces sobre el mismo valor leído (Stripe no
+								// ofrece un decremento atómico en metadata) — este suelo evita
+								// que el stock quede en negativo aunque no elimina la carrera en
+								// sí. Ver ARCHITECTURE.md sobre por qué no hay un lock distribuido
+								// aquí (exigiría infraestructura nueva, fuera de presupuesto).
+								stock: Math.max(0, product.metadata.stock - quantity),
 							},
 						});
 
 						revalidateTag(`product-${product.id}`, "max");
 					}
 				}
+
+				// Revalida también el tag amplio: la ficha (productGetBySlug) y la
+				// categoría (productBrowse) cachean por slug/categoría bajo "product",
+				// no por el id interno de Stripe — sin esto seguían mostrando el stock
+				// de antes de la venta hasta que la dueña editara cualquier producto.
+				revalidateTag("product", "max");
 
 				// Stripe hace merge de metadata: esta clave se añade sin borrar las del carrito.
 				await stripe.paymentIntents.update(event.data.object.id, {
@@ -206,6 +280,61 @@ export async function POST(request: Request) {
 
 			break;
 
+		// La dueña reembolsa un pedido desde el Dashboard de Stripe (su única forma
+		// de gestionar devoluciones, ADR-003): sin esto el stock descontado en la
+		// venta original se queda bajo para siempre, y si era la última unidad la
+		// ficha se queda marcada "agotado" para un producto que ya vuelve a estarlo.
+		case "charge.refunded": {
+			const charge = event.data.object;
+			if (!charge.refunded) {
+				// Reembolso parcial: no hay forma fiable de saber a qué línea del
+				// pedido corresponde, así que no tocamos stock — solo actuamos
+				// cuando el cargo queda reembolsado por completo.
+				break;
+			}
+
+			const paymentIntentId =
+				typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+			if (!paymentIntentId) {
+				console.warn("charge.refunded sin payment_intent asociado", { chargeId: charge.id });
+				break;
+			}
+
+			try {
+				const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+				if (paymentIntent.metadata.stock_restored) {
+					console.warn("Stock ya devuelto para este reembolso, se omite", { paymentIntentId });
+					break;
+				}
+				if (!paymentIntent.metadata.stock_processed) {
+					// Nunca se llegó a descontar stock para este pago (p. ej. se
+					// reembolsó antes de que este webhook lo procesara) — nada que devolver.
+					break;
+				}
+
+				const refundedMetadata = cartMetadataSchema.parse(paymentIntent.metadata);
+				const products = await Commerce.getProductsFromMetadata(refundedMetadata);
+
+				for (const { product, quantity } of products) {
+					if (product && product.metadata.stock !== Infinity) {
+						await stripe.products.update(product.id, {
+							metadata: { stock: product.metadata.stock + quantity },
+						});
+						revalidateTag(`product-${product.id}`, "max");
+					}
+				}
+				revalidateTag("product", "max");
+
+				await stripe.paymentIntents.update(paymentIntentId, {
+					metadata: { stock_restored: "1" },
+				});
+			} catch (refundError) {
+				console.error("Error devolviendo stock tras reembolso", paymentIntentId, refundError);
+			}
+			break;
+		}
+
 		// Producto creado/editado/archivado en Stripe por la dueña:
 		// 1) Auto-slug si falta (así solo necesita Nombre + Precio + Foto; un
 		//    producto sin slug rompería el catálogo).
@@ -216,8 +345,14 @@ export async function POST(request: Request) {
 			const product = event.data.object;
 			if (product.active && !product.metadata?.slug && product.name) {
 				try {
+					const slug = await resolveUniqueSlug({
+						stripe,
+						baseSlug: slugify(product.name),
+						currentProductId: product.id,
+						hasVariant: Boolean(product.metadata?.variant),
+					});
 					await stripe.products.update(product.id, {
-						metadata: { slug: slugify(product.name) },
+						metadata: { slug },
 					});
 				} catch (slugError) {
 					console.error("No se pudo auto-generar el slug del producto", product.id, slugError);
