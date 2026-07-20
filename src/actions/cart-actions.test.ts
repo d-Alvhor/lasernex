@@ -8,6 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("commerce-kit", () => ({
 	cartGet: vi.fn(),
 	cartAdd: vi.fn(),
+	cartSetQuantity: vi.fn(),
+	productGetById: vi.fn(),
 	updatePaymentIntent: vi.fn(),
 	cartCount: vi.fn(() => 1),
 }));
@@ -25,7 +27,7 @@ vi.mock("@/lib/rate-limit", () => ({
 	rateLimit: vi.fn(() => true),
 }));
 
-const { addToCartAction } = await import("./cart-actions");
+const { addToCartAction, setQuantity } = await import("./cart-actions");
 
 function buildFormData(fields: Record<string, string>) {
 	const formData = new FormData();
@@ -110,5 +112,93 @@ describe("addToCartAction — personalización de producto", () => {
 		expect(Commerce.updatePaymentIntent).not.toHaveBeenCalled();
 		expect(updateTag).toHaveBeenCalledWith("cart-pi_new");
 		expect(result).toEqual({ id: "pi_new", metadata: {} });
+	});
+});
+
+describe("setQuantity — límite de stock y carrito autoritativo", () => {
+	beforeEach(() => {
+		mockCookieJar({ id: "pi_current", linesCount: 1 });
+		vi.mocked(Commerce.cartGet).mockResolvedValue({
+			cart: { id: "pi_current", metadata: {} },
+			lines: [],
+			shippingRate: null,
+		} as never);
+	});
+
+	afterEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("rechaza pedir más cantidad de la que hay en stock", async () => {
+		vi.mocked(Commerce.productGetById).mockResolvedValue({
+			metadata: { stock: 2 },
+		} as never);
+
+		await expect(setQuantity({ productId: "prod_1", quantity: 3 })).rejects.toThrow(
+			"Solo quedan 2 unidades disponibles de este producto.",
+		);
+		expect(Commerce.cartSetQuantity).not.toHaveBeenCalled();
+	});
+
+	it("permite pedir hasta el stock exacto disponible", async () => {
+		vi.mocked(Commerce.productGetById).mockResolvedValue({ metadata: { stock: 2 } } as never);
+		vi.mocked(Commerce.cartSetQuantity).mockResolvedValue({ id: "pi_current" } as never);
+
+		await setQuantity({ productId: "prod_1", quantity: 2 });
+
+		expect(Commerce.cartSetQuantity).toHaveBeenCalledWith({
+			productId: "prod_1",
+			cartId: "pi_current",
+			quantity: 2,
+		});
+	});
+
+	it("no comprueba stock cuando metadata.stock es Infinity (sin límite)", async () => {
+		vi.mocked(Commerce.productGetById).mockResolvedValue({
+			metadata: { stock: Number.POSITIVE_INFINITY },
+		} as never);
+		vi.mocked(Commerce.cartSetQuantity).mockResolvedValue({ id: "pi_current" } as never);
+
+		await setQuantity({ productId: "prod_1", quantity: 999 });
+
+		expect(Commerce.cartSetQuantity).toHaveBeenCalled();
+	});
+
+	it("usa el cartId leído de la cookie del servidor, no uno pasado desde el cliente", async () => {
+		vi.mocked(Commerce.productGetById).mockResolvedValue({ metadata: { stock: 5 } } as never);
+		vi.mocked(Commerce.cartSetQuantity).mockResolvedValue({ id: "pi_current" } as never);
+
+		await setQuantity({ productId: "prod_1", quantity: 1 });
+
+		expect(Commerce.cartSetQuantity).toHaveBeenCalledWith(expect.objectContaining({ cartId: "pi_current" }));
+	});
+
+	it("si cartSetQuantity falla en silencio (devuelve undefined), NO borra la personalización", async () => {
+		vi.mocked(Commerce.cartGet).mockResolvedValue({
+			cart: { id: "pi_current", metadata: { personalization_prod_1: "Ana" } },
+			lines: [],
+			shippingRate: null,
+		} as never);
+		vi.mocked(Commerce.cartSetQuantity).mockResolvedValue(undefined);
+
+		await setQuantity({ productId: "prod_1", quantity: 0 });
+
+		expect(Commerce.updatePaymentIntent).not.toHaveBeenCalled();
+	});
+
+	it("al quitar el producto (quantity 0) con éxito, sí borra la personalización", async () => {
+		vi.mocked(Commerce.cartGet).mockResolvedValue({
+			cart: { id: "pi_current", metadata: { personalization_prod_1: "Ana" } },
+			lines: [],
+			shippingRate: null,
+		} as never);
+		vi.mocked(Commerce.cartSetQuantity).mockResolvedValue({ id: "pi_current" } as never);
+
+		await setQuantity({ productId: "prod_1", quantity: 0 });
+
+		expect(Commerce.updatePaymentIntent).toHaveBeenCalledWith({
+			paymentIntentId: "pi_current",
+			data: { metadata: { personalization_prod_1: "" } },
+		});
 	});
 });

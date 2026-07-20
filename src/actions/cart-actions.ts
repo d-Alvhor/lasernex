@@ -147,19 +147,37 @@ export async function decreaseQuantity(productId: string) {
 
 export async function setQuantity({
 	productId,
-	cartId,
 	quantity,
 }: {
 	productId: string;
-	cartId: string;
 	quantity: number;
 }) {
 	const cart = await getCartFromCookiesAction();
 	if (!cart) {
 		throw new Error("Cart not found");
 	}
-	await Commerce.cartSetQuantity({ productId, cartId, quantity });
-	if (quantity <= 0) {
+
+	if (quantity > 0) {
+		const product = await Commerce.productGetById(productId);
+		if (product && product.metadata.stock !== Infinity && quantity > product.metadata.stock) {
+			throw new Error(
+				product.metadata.stock <= 0
+					? "Este producto está agotado ahora mismo."
+					: `Solo quedan ${product.metadata.stock} unidades disponibles de este producto.`,
+			);
+		}
+	}
+
+	// Se usa SIEMPRE el carrito leído de la cookie del servidor, nunca un
+	// cartId recibido del cliente: un carrito nuevo pudo crearse entre el
+	// render y el clic (p. ej. al completar una compra en otra pestaña), y
+	// mutar ese cartId antiguo movería stock de un carrito huérfano.
+	//
+	// cartSetQuantity traga sus propios errores (los loguea y devuelve
+	// undefined en vez de lanzar) — si falla, NO hay que borrar el texto de
+	// personalización: el producto seguiría en el carrito con su cantidad anterior.
+	const updatedCart = await Commerce.cartSetQuantity({ productId, cartId: cart.cart.id, quantity });
+	if (updatedCart && quantity <= 0) {
 		await clearPersonalizationMetadata(cart, productId);
 	}
 }

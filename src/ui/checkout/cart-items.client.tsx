@@ -1,24 +1,24 @@
 import { setQuantity } from "@/actions/cart-actions";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/utils";
+import { useCartMutation } from "@/ui/checkout/cart-mutation-context";
 import { useElements } from "@stripe/react-stripe-js";
 import clsx from "clsx";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
 import { useFormStatus } from "react-dom";
+import { toast } from "sonner";
 
 export const CartItemQuantity = ({
 	quantity,
 	productId,
 	productName,
-	cartId,
 	onChange,
 }: {
 	quantity: number;
 	productId: string;
 	productName: string;
-	cartId: string;
 	onChange: (args: { productId: string; action: "INCREASE" | "DECREASE" }) => void;
 }) => {
 	const { pending } = useFormStatus();
@@ -32,6 +32,7 @@ export const CartItemQuantity = ({
 
 	const elements = useElements();
 	const router = useRouter();
+	const { runTracked } = useCartMutation();
 
 	const formAction = async (action: "INCREASE" | "DECREASE") => {
 		onChange({ productId, action });
@@ -39,11 +40,14 @@ export const CartItemQuantity = ({
 		const doWork = async () => {
 			try {
 				const modifier = action === "INCREASE" ? 1 : -1;
-				await setQuantity({ cartId, productId, quantity: quantity + modifier });
+				await setQuantity({ productId, quantity: quantity + modifier });
 				await elements?.fetchUpdates();
 				router.refresh();
 				stateRef.current?.promise.resolve();
 			} catch (error) {
+				toast.error(error instanceof Error ? error.message : "No se pudo actualizar la cantidad.", {
+					position: "bottom-left",
+				});
 				stateRef.current?.promise.reject(error);
 			} finally {
 				stateRef.current = null;
@@ -53,13 +57,19 @@ export const CartItemQuantity = ({
 		if (stateRef.current) {
 			clearTimeout(stateRef.current.timer ?? undefined);
 			stateRef.current.timer = setTimeout(doWork, 400);
-		} else {
-			stateRef.current = {
-				timer: setTimeout(doWork, 400),
-				promise: Promise.withResolvers(),
-			};
+			return stateRef.current.promise.promise;
 		}
-		return stateRef.current.promise.promise;
+
+		// runTracked marca "cantidad en vuelo" (para el botón de Pagar, ver
+		// cart-mutation-context.tsx) desde este primer clic hasta que doWork
+		// resuelva de verdad — cubre también los 400ms de debounce, que es
+		// justo la ventana en la que el cliente podría pulsar "Pagar" antes de
+		// que el importe nuevo llegue a Stripe.
+		stateRef.current = {
+			timer: setTimeout(doWork, 400),
+			promise: Promise.withResolvers(),
+		};
+		return runTracked(() => stateRef.current!.promise.promise);
 	};
 
 	return (
@@ -110,15 +120,14 @@ export const CartItemQuantity = ({
 export const CartItemRemoveButton = ({
 	productId,
 	productName,
-	cartId,
 }: {
 	productId: string;
 	productName: string;
-	cartId: string;
 }) => {
 	const { pending } = useFormStatus();
 	const elements = useElements();
 	const router = useRouter();
+	const { runTracked } = useCartMutation();
 
 	return (
 		<Button
@@ -128,9 +137,11 @@ export const CartItemRemoveButton = ({
 			disabled={pending}
 			className="h-auto p-0 font-sans text-xs font-normal text-muted-foreground underline underline-offset-2 hover:text-foreground"
 			formAction={async () => {
-				await setQuantity({ cartId, productId, quantity: 0 });
-				await elements?.fetchUpdates();
-				router.refresh();
+				await runTracked(async () => {
+					await setQuantity({ productId, quantity: 0 });
+					await elements?.fetchUpdates();
+					router.refresh();
+				});
 			}}
 			aria-label={`Quitar ${productName} del carrito`}
 		>
