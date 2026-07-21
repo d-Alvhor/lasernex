@@ -126,6 +126,29 @@ flowchart TB
 - **Efecto colateral**: esto fija también `typescript` (`5.9.3`) y `@types/node` (`22.20.1`) por debajo de sus últimas versiones (`7.x`/`26.x`), ya que son `peerDependencies` declaradas por `commerce-kit@0.0.39` (`^5.5.4`, `^20||^22`). Actualizar TS/node más allá de eso rompe la instalación (`npm error ERESOLVE`).
 - **Parche `patches/commerce-kit@0.0.39.patch` (2026-07-20/21, mantenimiento sobre el árbol congelado)**: `productGet({slug})` y `productBrowse({filter:{category}})` usaban `stripe.products.search(...)` (Search API), que tiene retraso de indexado — Stripe documenta explícitamente "do not use Search for read-after-write flows" (searchable en <1 min "bajo condiciones normales", sin cota superior garantizada). Efecto real: al subir un producto nuevo, el nombre de categoría aparecía al instante en el nav (`categoryBrowse` usa `products.list`, tiempo real) pero la ficha del producto y su página de categoría devolvían "no existe" durante ese margen. Parcheado con `bun patch` para que ambas funciones usen `products.list` + filtro en memoria por `metadata.slug`/`metadata.category` — mismo patrón que ya usaba la rama sin filtro de `productBrowse`, sin tocar deduplicado/orden/validación de variantes existentes. **Corrección posterior (mismo parche, un día después)**: la primera versión dejaba `limit:100` fijo sin paginar — con más de 100 productos activos, los más antiguos (Stripe ordena por creación descendente) desaparecían de golpe de listado/ficha/categoría/sitemap sin aviso. El parche ahora incluye un helper `__listAllActiveProducts` que pagina de verdad con `starting_after`/`has_more` hasta traer el catálogo activo completo, usado por las tres funciones que antes hacían una única llamada de 100. El diff se reaplica solo en cada `bun install` (`patchedDependencies` en `package.json`); si se actualiza `commerce-kit` alguna vez, revisar si el parche sigue aplicando limpio.
 
+### Umbrales de catálogo a vigilar si el negocio crece (2026-07-21, auditoría de operación sin mantenimiento)
+
+Ninguno de estos afecta hoy (catálogo real bien por debajo de los límites), pero si nadie revisa el
+código durante años y el catálogo crece mucho, son el tipo de fallo que empieza a truncar datos **en
+silencio**, sin ningún error visible:
+
+- **`first:100` fijo en las llamadas a `productBrowse`** (`sitemap.ts`, `products/page.tsx`,
+	`search.ts`, `category/[slug]/page.tsx`): el parche de ADR-006 ya trae el catálogo activo COMPLETO
+	desde Stripe, pero estas llamadas siguen recortando el resultado a 100 elementos con
+	`.slice(offset, first)`. Con más de 100 productos activos (o más de 100 en una sola categoría), los
+	más antiguos dejan de salir en listado/categoría/sitemap/buscador sin ningún aviso. Revisar si el
+	catálogo se acerca a esa cifra.
+- **Coste de cada carga de ficha/categoría**: por el mismo motivo, cada visita a una ficha o categoría
+	(y cada invalidación de caché tras una venta) recorre el catálogo activo completo. Con el tamaño
+	actual es una sola llamada a Stripe; si el catálogo creciera mucho, pasaría a ser varias llamadas
+	secuenciales por carga, con el consiguiente coste de latencia — vigilar si el catálogo empieza a
+	acercarse a varios cientos de productos.
+- **Límite de metadata de Stripe (50 claves, 500 caracteres por valor)**: el carrito ya usa un puñado
+	de claves fijas (envío, facturación, impuestos) más una clave dinámica por cada producto
+	personalizado distinto en el pedido. Con el patrón de uso actual es muy improbable llegar al
+	límite, pero un pedido con muchos productos personalizados distintos a la vez podría acercarse:
+	revisar si esto pasa alguna vez a fallar al guardar el carrito.
+
 ### ADR-007 — Licencia del código base: **AGPL-3.0** ✅ DECIDIDO (2026-07-11, delegado por Álvaro a la IA)
 - **Contexto**: `yournextstore` se distribuye con doble licencia: AGPL-3.0-only (gratis) o comercial (de pago, contacto `hi@yournextstore.com`). La AGPL-3.0 tiene cláusula de "copyleft de red" (§13): al ejecutar una versión modificada como servicio accesible por red (una tienda online lo es), hay que ofrecer el código fuente correspondiente a quien interactúe con el servicio, "desde un servidor de red".
 - **Decisión: AGPL-3.0.** Álvaro delegó explícitamente la elección ("la que veas mejor... mi hermana no tiene dinero para pagar un gestor"). Descartadas: (b) licencia comercial → cuesta dinero que no hay; (c) "confiar en que la cláusula no aplica" → jurídicamente inseguro, no es responsable montarlo así.

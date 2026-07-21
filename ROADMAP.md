@@ -12,7 +12,7 @@
 - [x] Cuenta Stripe en **modo test**: negocio, IVA 21% (precios con IVA incluido — confirmado: NO se activa Stripe Tax, coherente con la política de precios de `src/app/(store)/legal/*`), zonas de envío España con tarifas
 - [x] Primer producto de prueba con variantes (metadata) — falta foto real (Stripe no tiene `images` todavía, solo texto)
 - [x] `.env.example` documentado
-- [x] Deploy en Vercel + dominio lasernex.es con HTTPS — en producción, verificado (apex y `www` con HSTS, ver `DEPLOY.md`)
+- [x] Deploy en Vercel + dominio lasernex.es con HTTPS — en producción, verificado (apex y `www` con HSTS). Los detalles de infraestructura (registrador del dominio, cuentas) se llevan en privado, no en este repo público (ver nota al final de `CLAUDE.md`)
 - **Hito**: la tienda carga en lasernex.es y muestra el producto de prueba
 
 ### Semana 2 — Marca y contenido (= FASE 2)
