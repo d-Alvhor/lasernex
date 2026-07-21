@@ -97,6 +97,29 @@ describe("GET /api/orders/[paymentIntentId]/ship — página de confirmación, s
 		expect(res.status).toBe(401);
 		expect(sendOrderShippedEmail).not.toHaveBeenCalled();
 	});
+
+	it("incluye campos de texto EDITABLES (no ocultos) para tracking/trackingUrl, no solo prellenados en la URL", async () => {
+		vi.mocked(Commerce.orderGet).mockResolvedValue(buildOrder({ paymentIntentId: "pi_fields" }));
+
+		const res = await GET(
+			buildGetRequest("pi_fields", "&tracking=ABC123&trackingUrl=https%3A%2F%2Fcorreos.es%2Ft%3Fid%3D1"),
+			params("pi_fields"),
+		);
+		const html = await res.text();
+
+		expect(html).toContain('<input type="text" name="tracking" value="ABC123"');
+		expect(html).toContain('<input type="text" name="trackingUrl" value="https://correos.es/t?id=1"');
+	});
+
+	it("sin parámetros de tracking en la URL, los campos salen vacíos pero presentes (no truco de campo oculto)", async () => {
+		vi.mocked(Commerce.orderGet).mockResolvedValue(buildOrder({ paymentIntentId: "pi_nofields" }));
+
+		const res = await GET(buildGetRequest("pi_nofields"), params("pi_nofields"));
+		const html = await res.text();
+
+		expect(html).toContain('<input type="text" name="tracking" value=""');
+		expect(html).toContain('<input type="text" name="trackingUrl" value=""');
+	});
 });
 
 describe("POST /api/orders/[paymentIntentId]/ship — envío real, solo tras confirmar", () => {
@@ -148,5 +171,39 @@ describe("POST /api/orders/[paymentIntentId]/ship — envío real, solo tras con
 		expect(res.status).toBe(404);
 		expect(html).not.toContain("<script>alert(1)</script>");
 		expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+	});
+
+	it("con los campos de tracking vacíos (formulario sin rellenar), no rechaza la petición", async () => {
+		vi.mocked(Commerce.orderGet).mockResolvedValue(buildOrder({ paymentIntentId: "pi_empty_tracking" }));
+		vi.mocked(sendOrderShippedEmail).mockResolvedValue({ id: "email_1" } as never);
+
+		const res = await POST(
+			buildPostRequest("pi_empty_tracking", { tracking: "", trackingUrl: "" }),
+			params("pi_empty_tracking"),
+		);
+
+		expect(res.status).toBe(200);
+		expect(sendOrderShippedEmail).toHaveBeenCalledWith(
+			"cliente@example.com",
+			expect.objectContaining({ trackingNumber: null, trackingUrl: null }),
+		);
+	});
+
+	it("una URL de seguimiento con su propio '&' llega completa (campo de formulario, no query string cortada)", async () => {
+		vi.mocked(Commerce.orderGet).mockResolvedValue(buildOrder({ paymentIntentId: "pi_amp" }));
+		vi.mocked(sendOrderShippedEmail).mockResolvedValue({ id: "email_1" } as never);
+		const trackingUrlConAmpersand =
+			"https://www.correos.es/es/es/herramientas/localizador?tracking-number=123&lang=es";
+
+		const res = await POST(
+			buildPostRequest("pi_amp", { trackingUrl: trackingUrlConAmpersand }),
+			params("pi_amp"),
+		);
+
+		expect(res.status).toBe(200);
+		expect(sendOrderShippedEmail).toHaveBeenCalledWith(
+			"cliente@example.com",
+			expect.objectContaining({ trackingUrl: trackingUrlConAmpersand }),
+		);
 	});
 });

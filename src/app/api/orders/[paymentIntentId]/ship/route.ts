@@ -24,13 +24,19 @@ function safeTokenEqual(a: string, b: string): boolean {
 	return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
 }
 
+// Trata la cadena vacía como "no enviado": los campos de tracking ahora son
+// inputs de formulario reales (ver GET más abajo), y un <input> sin rellenar
+// envía value="" — sin esto, "" fallaría la validación de .url() en vez de
+// tratarse como opcional.
+const emptyToUndefined = (val: unknown) => (val === "" ? undefined : val);
+
 // Enlace que la dueña guarda en marcadores/recibe por email (ver OPERATIONS.md).
 // No hay panel de administración propio (ADR-003): un único secreto compartido
 // protege esta acción, no una cuenta de usuario.
 const querySchema = z.object({
 	token: z.string().min(1),
-	tracking: z.string().max(100).optional(),
-	trackingUrl: z.string().url().optional(),
+	tracking: z.preprocess(emptyToUndefined, z.string().max(100).optional()),
+	trackingUrl: z.preprocess(emptyToUndefined, z.string().url().optional()),
 });
 
 const htmlResponse = (message: string, status: number) =>
@@ -85,15 +91,22 @@ export async function GET(request: Request, props: { params: Promise<{ paymentIn
 	}
 
 	const customerName = order.order.shipping?.name ?? order.order.latest_charge?.billing_details?.name ?? "";
-	const hiddenFields = [
-		`<input type="hidden" name="token" value="${escapeHtml(parsed.data.token)}" />`,
-		parsed.data.tracking
-			? `<input type="hidden" name="tracking" value="${escapeHtml(parsed.data.tracking)}" />`
-			: "",
-		parsed.data.trackingUrl
-			? `<input type="hidden" name="trackingUrl" value="${escapeHtml(parsed.data.trackingUrl)}" />`
-			: "",
-	].join("");
+	const inputStyle = "width:100%;box-sizing:border-box;padding:.5rem;margin-top:.25rem;font-size:1rem;";
+	// Campos de texto EDITABLES (no ocultos) para el número/enlace de
+	// seguimiento: si Carla pega aquí el enlace de la mensajería (que suele
+	// llevar sus propios "&"), el navegador lo codifica bien al enviar el
+	// formulario — pegarlo directamente en la URL de este enlace (query
+	// string) lo cortaría en el primer "&". Se prellenan por si ya venían en
+	// la URL, pero se pueden escribir o corregir aquí mismo sin tocar el enlace.
+	const trackingFields = `
+		<label style="display:block;margin-top:1rem;font-size:.9rem;">
+			Número de seguimiento (opcional)
+			<input type="text" name="tracking" value="${escapeHtml(parsed.data.tracking ?? "")}" style="${inputStyle}" />
+		</label>
+		<label style="display:block;margin-top:.75rem;font-size:.9rem;">
+			Enlace de seguimiento (opcional)
+			<input type="text" name="trackingUrl" value="${escapeHtml(parsed.data.trackingUrl ?? "")}" style="${inputStyle}" />
+		</label>`;
 
 	return new NextResponse(
 		`<!doctype html><html lang="es"><body style="font-family: sans-serif; padding: 2rem; max-width: 480px; margin: 0 auto;">
@@ -101,8 +114,9 @@ export async function GET(request: Request, props: { params: Promise<{ paymentIn
 				customerName ? ` de ${escapeHtml(customerName)}` : ""
 			} y avisar por email a ${escapeHtml(email)}?</p>
 			<form method="POST">
-				${hiddenFields}
-				<button type="submit" style="font-size:1.1rem;padding:.75rem 1.5rem;cursor:pointer;">Sí, marcar como enviado</button>
+				<input type="hidden" name="token" value="${escapeHtml(parsed.data.token)}" />
+				${trackingFields}
+				<button type="submit" style="margin-top:1.5rem;font-size:1.1rem;padding:.75rem 1.5rem;cursor:pointer;">Sí, marcar como enviado</button>
 			</form>
 		</body></html>`,
 		{ status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } },
