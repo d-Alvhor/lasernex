@@ -172,12 +172,18 @@ export async function setQuantity({
 	// cartId recibido del cliente: un carrito nuevo pudo crearse entre el
 	// render y el clic (p. ej. al completar una compra en otra pestaña), y
 	// mutar ese cartId antiguo movería stock de un carrito huérfano.
-	//
-	// cartSetQuantity traga sus propios errores (los loguea y devuelve
-	// undefined en vez de lanzar) — si falla, NO hay que borrar el texto de
-	// personalización: el producto seguiría en el carrito con su cantidad anterior.
 	const updatedCart = await Commerce.cartSetQuantity({ productId, cartId: cart.cart.id, quantity });
-	if (updatedCart && quantity <= 0) {
+
+	// cartSetQuantity traga sus propios errores (los loguea y devuelve
+	// undefined en vez de lanzar): sin este chequeo, un fallo transitorio de
+	// Stripe al SUBIR la cantidad no avisaba a nadie — el cliente pulsaba "+"
+	// y no pasaba nada, sin ningún error visible. Al bajar a 0, además,
+	// tampoco hay que borrar el texto de personalización si esto falló: el
+	// producto seguiría en el carrito con su cantidad anterior.
+	if (!updatedCart) {
+		throw new Error("No se pudo actualizar la cantidad. Inténtalo de nuevo.");
+	}
+	if (quantity <= 0) {
 		await clearPersonalizationMetadata(cart, productId);
 	}
 }

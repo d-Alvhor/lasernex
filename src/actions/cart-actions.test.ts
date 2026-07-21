@@ -173,7 +173,7 @@ describe("setQuantity — límite de stock y carrito autoritativo", () => {
 		expect(Commerce.cartSetQuantity).toHaveBeenCalledWith(expect.objectContaining({ cartId: "pi_current" }));
 	});
 
-	it("si cartSetQuantity falla en silencio (devuelve undefined), NO borra la personalización", async () => {
+	it("si cartSetQuantity falla en silencio (devuelve undefined) al quitar el producto, lanza error y NO borra la personalización", async () => {
 		vi.mocked(Commerce.cartGet).mockResolvedValue({
 			cart: { id: "pi_current", metadata: { personalization_prod_1: "Ana" } },
 			lines: [],
@@ -181,9 +181,20 @@ describe("setQuantity — límite de stock y carrito autoritativo", () => {
 		} as never);
 		vi.mocked(Commerce.cartSetQuantity).mockResolvedValue(undefined);
 
-		await setQuantity({ productId: "prod_1", quantity: 0 });
+		await expect(setQuantity({ productId: "prod_1", quantity: 0 })).rejects.toThrow(
+			"No se pudo actualizar la cantidad. Inténtalo de nuevo.",
+		);
 
 		expect(Commerce.updatePaymentIntent).not.toHaveBeenCalled();
+	});
+
+	it("si cartSetQuantity falla en silencio (devuelve undefined) al SUBIR la cantidad, también lanza error", async () => {
+		vi.mocked(Commerce.productGetById).mockResolvedValue({ metadata: { stock: 5 } } as never);
+		vi.mocked(Commerce.cartSetQuantity).mockResolvedValue(undefined);
+
+		await expect(setQuantity({ productId: "prod_1", quantity: 2 })).rejects.toThrow(
+			"No se pudo actualizar la cantidad. Inténtalo de nuevo.",
+		);
 	});
 
 	it("al quitar el producto (quantity 0) con éxito, sí borra la personalización", async () => {
