@@ -23,10 +23,17 @@ export const CartItemQuantity = ({
 }) => {
 	const { pending } = useFormStatus();
 
-	const stateRef = useRef<{
+	type Cycle = {
 		timer: ReturnType<typeof setTimeout> | null;
 		promise: PromiseWithResolvers<void>;
-	}>(null);
+		// Se pone a true en cuanto arranca la llamada de red (pasado el debounce).
+		// Mientras sea false, un clic nuevo puede reutilizar y reprogramar este
+		// mismo ciclo (coalesce de clics rápidos en una sola petición). Una vez
+		// arrancó, un clic nuevo ya NO lo toca — crea su propio ciclo aparte.
+		started: boolean;
+	};
+
+	const stateRef = useRef<Cycle | null>(null);
 
 	const isPending = pending && stateRef.current !== null;
 
@@ -37,39 +44,56 @@ export const CartItemQuantity = ({
 	const formAction = async (action: "INCREASE" | "DECREASE") => {
 		onChange({ productId, action });
 
-		const doWork = async () => {
+		// Ojo: opera sobre el `cycle` recibido por parámetro, nunca sobre
+		// `stateRef.current` directamente — si un clic posterior ya creó un
+		// ciclo NUEVO (ver más abajo), stateRef.current ya no es este cycle, y
+		// resolver/limpiar el ciclo equivocado dejaría el nuevo huérfano.
+		const doWork = async (cycle: Cycle) => {
+			cycle.started = true;
 			try {
 				const modifier = action === "INCREASE" ? 1 : -1;
 				await setQuantity({ productId, quantity: quantity + modifier });
 				await elements?.fetchUpdates();
 				router.refresh();
-				stateRef.current?.promise.resolve();
+				cycle.promise.resolve();
 			} catch (error) {
 				toast.error(error instanceof Error ? error.message : "No se pudo actualizar la cantidad.", {
 					position: "bottom-left",
 				});
-				stateRef.current?.promise.reject(error);
+				cycle.promise.reject(error);
 			} finally {
-				stateRef.current = null;
+				if (stateRef.current === cycle) {
+					stateRef.current = null;
+				}
 			}
 		};
 
-		if (stateRef.current) {
-			clearTimeout(stateRef.current.timer ?? undefined);
-			stateRef.current.timer = setTimeout(doWork, 400);
-			return stateRef.current.promise.promise;
+		if (stateRef.current && !stateRef.current.started) {
+			// Aún no arrancó la llamada de red de este ciclo: se reutiliza y se
+			// reprograma con la acción más reciente (coalesce de clics rápidos
+			// dentro de la ventana de debounce), igual que antes.
+			const cycle = stateRef.current;
+			clearTimeout(cycle.timer ?? undefined);
+			cycle.timer = setTimeout(() => doWork(cycle), 400);
+			return cycle.promise.promise;
 		}
 
-		// runTracked marca "cantidad en vuelo" (para el botón de Pagar, ver
-		// cart-mutation-context.tsx) desde este primer clic hasta que doWork
-		// resuelva de verdad — cubre también los 400ms de debounce, que es
-		// justo la ventana en la que el cliente podría pulsar "Pagar" antes de
-		// que el importe nuevo llegue a Stripe.
-		stateRef.current = {
-			timer: setTimeout(doWork, 400),
+		// No hay ciclo, o el que hay ya arrancó su llamada de red: se crea uno
+		// nuevo e independiente. runTracked marca "cantidad en vuelo" (para el
+		// botón de Pagar, ver cart-mutation-context.tsx) desde este clic hasta
+		// que ESTE ciclo resuelva — si no se creara uno nuevo aquí, un clic que
+		// llega mientras la petición anterior sigue en curso se quedaría
+		// esperando la promesa de ESA petición, y en cuanto ella terminara
+		// "Pagar" se desbloquearía aunque este clic todavía no se hubiera
+		// aplicado en Stripe.
+		const cycle: Cycle = {
+			timer: null,
 			promise: Promise.withResolvers(),
+			started: false,
 		};
-		return runTracked(() => stateRef.current!.promise.promise);
+		cycle.timer = setTimeout(() => doWork(cycle), 400);
+		stateRef.current = cycle;
+		return runTracked(() => cycle.promise.promise);
 	};
 
 	return (
