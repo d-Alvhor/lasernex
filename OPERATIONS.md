@@ -17,12 +17,13 @@
    - **Descripción**: qué es, material, medidas, colores. Este texto aparece en la web y en Google — escríbelo pensando en el cliente.
    - **Imágenes**: sube las fotos. ⚠️ **La primera foto es la principal** (la que sale en el catálogo y cuando alguien comparte el enlace): usa una buena, en horizontal si puedes, de al menos 1200 px de ancho.
 4. En **Precio**: pon el precio **con IVA incluido** (lo que paga el cliente, ej. 24,90 €), moneda **EUR**, tipo **Único** (no recurrente).
-5. Si el producto tiene **variantes** (color, tamaño): de momento, la forma sencilla es crear **un precio por variante** o **un producto por variante** ("Maceta 12 cm — Blanca", "Maceta 12 cm — Negra"). Te dejaremos montado un ejemplo para copiar.
+5. Si el producto tiene **variantes** (color, tamaño): puedes hacerlo como productos totalmente aparte, cada uno con su propio Nombre ("Maceta 12 cm — Blanca", "Maceta 12 cm — Negra") — la forma más simple. O, si quieres que el cliente los vea todos juntos en una sola ficha con un selector, crea un producto por variante pero con **el mismo Nombre exacto en todos**, y añade la casilla de metadata `variant` con un valor distinto en cada uno (`blanca`, `negra`...). Ver el aviso de §1.5.d sobre qué pasa si dos productos comparten Nombre por accidente.
 5.b **Si el producto se personaliza con un nombre/texto** (una taza grabada, una figura con un nombre, etc.): baja hasta la sección **Metadatos** (Metadata) del formulario del producto → **+ Añadir metadato** → en **Clave** pon exactamente `preview` (todo en minúsculas, sin espacios) → en **Valor** escribe el texto que verá el cliente encima del campo, por ejemplo `Nombre para grabar` o `¿Qué texto quieres en la pieza?`. Guarda. En la web aparecerá un cuadro de texto obligatorio antes de "Añadir al carrito" con esa misma frase, y el cliente no podrá comprarlo sin rellenarlo. Si el producto NO se personaliza, simplemente no añadas ese metadato.
 5.c **Otros metadatos que entiende la web** (en la misma sección **Metadatos**, un metadato por línea):
    - **Clave** `category` → **Valor**: en qué categoría de la web sale el producto (ej. `macetas`). Escríbelo **en minúsculas y sin tildes**. Ojo: una palabra NUEVA crea una categoría nueva en el menú automáticamente — cuidado con las erratas (`macetas` y `maceta` serían DOS categorías distintas). Si te pasa, se corrige editando el **Valor** del metadato, no hay que borrar nada más.
    - **Clave** `stock` → **Valor**: número de unidades que tienes (ej. `5`). La web pone **"Agotado" automáticamente al llegar a 0** y descuenta las unidades sola con cada venta — no tienes que tocarlo tras cada pedido, solo cuando fabriques más.
    - **Clave** `order` → **Valor**: orden de aparición en el catálogo — **el número más bajo sale primero** (ej. `1` sale antes que `10`). Si no lo pones, el producto sale detrás de los que sí lo tienen.
+5.d ⚠️ **Si dos productos acaban con el mismo Nombre por accidente** (un despiste, no porque sean variantes) y ninguno lleva la casilla `variant`, la web se da cuenta sola y no rompe nada: al segundo le añade automáticamente un "-2" al final de su dirección web para que ambos sigan funcionando. Puede quedar raro (dos fichas con el mismo Nombre visible pero direcciones distintas) — si lo ves, o le pones un Nombre distinto a cada uno, o rellenas `variant` en los dos.
 6. Guarda. **Normalmente aparece en la web en segundos, solo.** En algún caso raro (sobre todo justo al crear un producto muy nuevo) su ficha individual puede tardar un par de minutos aunque ya salga en el catálogo — si tarda más, abre este enlace guardado en marcadores para forzar el refresco:
 
    ```
@@ -62,6 +63,10 @@ Te llegarán **dos emails** por cada venta: uno de **Stripe** avisando del pago,
 
 Consejo: usa la vista **Pagos** como tu lista de tareas — lo de arriba es lo más nuevo. Si un día hay mucho movimiento, apúntate en una libreta o nota del móvil cuáles ya enviaste.
 
+**Red de seguridad, por si el email interno alguna vez falla** (clave de email caducada, cuota agotada — nunca debería pasar, pero por si acaso): si llevas varios días sin recibir NINGÚN email de "Nuevo pedido" aunque sepas que tu tienda tiene visitas, entra directamente a **Pagos** en Stripe y comprueba si hay ventas que no te avisaron. Es buena costumbre echar un vistazo a Pagos una vez por semana aunque los emails lleguen bien, solo para confirmar que todo cuadra.
+
+**Si algún día necesitas cambiar el secreto de estos enlaces** (por ejemplo, si sospechas que uno se ha filtrado): quien tenga acceso al panel de Vercel del proyecto puede ir a **Settings → Environment Variables**, generar un valor nuevo (un texto largo al azar) para `SHIP_NOTIFICATION_SECRET` o `STORE_REFRESH_SECRET`, y guardar — Vercel vuelve a desplegar la web sola con el nuevo valor. Los enlaces antiguos (los que ya tengas guardados o en emails viejos) dejan de funcionar en cuanto lo cambies.
+
 ---
 
 ## 3. Hacer un reembolso (devolución de dinero)
@@ -99,16 +104,28 @@ La numeración de facturas es automática y correlativa (se configura una sola v
 
 El dinero llega a tu cuenta bancaria automáticamente (por defecto cada pocos días — el ritmo se ve en **Configuración → Transferencias**).
 
+**Para hacerte una idea de si el negocio va bien o mal**: compara el neto de este mes con el del mes anterior (no hace falta más que eso para empezar). Si los reembolsos de un mes se acercan a una parte importante de las ventas de ese mismo mes, es una señal de que algo no está yendo bien (producto, envío, expectativas del cliente) y merece la pena pararse a pensar por qué.
+
 ---
 
 ## 6. Si algo va mal
 
 | Problema | Qué hacer |
 |---|---|
-| Un producto no aparece en la web | ¿Está **activo** (no archivado) en Stripe y tiene precio en EUR? Usa el enlace de "refrescar tienda" (§1). Si sigue sin salir, avisa a Álvaro. |
+| Un producto no aparece en la web | ¿Está **activo** (no archivado) en Stripe y tiene precio en EUR? Usa el enlace de "refrescar tienda" (§1). Si tiene el mismo Nombre que otro producto tuyo, mira §1.5.b — es la causa más habitual. Si sigue sin salir tras unos minutos, abre el producto y guárdalo de nuevo sin cambiar nada. Si aun así no aparece, mira el aviso final sobre pedir ayuda técnica. |
 | Un cliente dice que pagó pero no ves el pago | En **Pagos**, busca por su email. Si no está, no se completó el pago: pídele que lo intente de nuevo. |
-| Email de Stripe sobre una "disputa" (chargeback) | El cliente reclamó al banco. Entra en el aviso, aporta lo que Stripe pida (justificante de envío, emails). Tiene fecha límite: no lo dejes pasar. |
-| La web está caída | Avisa a Álvaro. (Los pagos en curso en Stripe no se pierden.) |
-| Te piden borrar sus datos (GDPR) | Reenvía el email a Álvaro; hay obligación de responder en un mes. |
+| Email de Stripe sobre una "disputa" (chargeback) | El cliente reclamó al banco. Entra en el aviso, aporta lo que Stripe pida (justificante de envío, capturas de conversación con el cliente). **Tiene fecha límite corto: no lo dejes pasar.** Si la pierdes, se pierde el producto Y el dinero, más una comisión. Un número alto de disputas puede además poner en riesgo la cuenta de Stripe entera — si te pasa más de una vez, revisa con calma qué está fallando (entrega, comunicación con el cliente). |
+| La web está caída | Primero comprueba que no es solo tu conexión: pruébala desde el móvil con datos, sin wifi. Si sigue sin cargar para todo el mundo, es un problema técnico real (mira el aviso final sobre pedir ayuda). Mientras tanto, tranquila: **los pagos que ya se hicieron no se pierden**, viven en Stripe, no en la web. |
+| Te piden borrar sus datos (GDPR) | No lo decidas tú sola: consulta con tu **gestoría/asesor fiscal** (el mismo que te lleva las facturas) — ellos saben qué datos hay que conservar por obligación legal (facturas, varios años) y cuáles sí se pueden borrar. Hay un mes de plazo para responder al cliente. |
+| Se te olvida la contraseña de Stripe, o pierdes el acceso a tu email | Es tu cuenta, no depende de nadie más: en la pantalla de acceso de Stripe usa "¿Olvidaste tu contraseña?". Si además perdiste el acceso al email con el que te diste de alta, contacta directamente con el **soporte de Stripe** (dashboard.stripe.com/support o help.stripe.com) — te pedirán verificar tu identidad. |
+| Quieres pausar la tienda (vacaciones, sin stock de nada) | Selecciona todos tus productos en el Catálogo → **Archivar** en bloque. La web se queda sin productos activos hasta que los desarchives. Si tienes pedidos ya pagados en curso, avisa a esos clientes del retraso dentro del plazo de fabricación que prometes en las condiciones (§4 legal). |
+| Quieres subir precios en bloque, o cambia el IVA | No hay un botón de "subir todos los precios un X%" en Stripe: hay que repetir el proceso de "cambiar un precio" (§1) producto por producto. El tipo de IVA (21% ahora mismo) solo cambiaría si cambia la ley española — si eso pasa alguna vez, pregunta a tu gestoría el nuevo tipo y pide ayuda técnica para actualizarlo en el código (no se edita desde Stripe). |
 
-**Tu sesión de Stripe es la llave de la caja**: contraseña fuerte, activa la verificación en dos pasos (Stripe te lo ofrecerá), y no la compartas.
+**Tu sesión de Stripe es la llave de la caja**: contraseña fuerte, activa la verificación en dos pasos (Stripe te lo ofrecerá), y no la compartas. Considera añadir un segundo acceso de confianza (⚙️ → **Configuración** → **Equipo**) para no depender de una sola contraseña o un solo email.
+
+### Si necesitas ayuda técnica de verdad y no puedes contactar con Álvaro
+
+El código de esta tienda es público y libre (licencia AGPL-3.0), pensado exactamente para esto: no
+dependes obligatoriamente de una persona concreta. Cualquier programador que sepa Next.js/React puede
+coger el repositorio, entenderlo (empieza por el fichero `CLAUDE.md`, que explica toda la tienda) y
+arreglar o cambiar lo que haga falta.
