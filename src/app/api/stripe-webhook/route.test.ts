@@ -127,6 +127,13 @@ describe("POST /api/stripe-webhook — payment_intent.succeeded", () => {
 		// idempotencia) todavía no tiene stock_processed — cada test que quiera
 		// simular el caso "ya procesado" lo sobreescribe explícitamente.
 		paymentIntentsRetrieve.mockResolvedValue({ metadata: {} });
+		// vitest.config.ts tiene mockReset:true — resetea la implementación de
+		// TODOS los mocks (incluido el valor por defecto puesto en el factory de
+		// vi.mock) antes de cada test. Sin re-establecerlo aquí, estas dos
+		// funciones resolverían a `undefined` en todos los tests salvo que cada
+		// uno lo pisara explícitamente.
+		vi.mocked(sendOrderNotificationEmail).mockResolvedValue({ id: "email_notification" } as never);
+		vi.mocked(sendOrderConfirmationEmail).mockResolvedValue({ id: "email_confirmation" } as never);
 	});
 
 	afterEach(() => {
@@ -190,6 +197,53 @@ describe("POST /api/stripe-webhook — payment_intent.succeeded", () => {
 		expect(productsUpdate).not.toHaveBeenCalled();
 	});
 
+	it("si falla el descuento de stock, responde 500 para que Stripe reintente el evento", async () => {
+		// Es seguro reintentar: la idempotencia mira el PaymentIntent en vivo, no
+		// un contador propio, así que un reintento tras un fallo transitorio no
+		// duplica nada.
+		vi.mocked(Commerce.getProductsFromMetadata).mockResolvedValue([
+			{ product: buildProduct({ id: "prod_a", stock: 10 }), quantity: 1 },
+		]);
+		productsUpdate.mockRejectedValueOnce(new Error("Stripe caído"));
+
+		const res = await POST(buildRequest(buildEvent({ paymentIntentId: "pi_stockfail" })));
+
+		expect(res.status).toBe(500);
+		expect(paymentIntentsUpdate).not.toHaveBeenCalledWith("pi_stockfail", {
+			metadata: { stock_processed: "1" },
+		});
+	});
+
+	it("si sendOrderNotificationEmail devuelve {skipped}/{failed}, lo registra pero no rompe la respuesta", async () => {
+		const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		vi.mocked(Commerce.orderGet).mockResolvedValue(buildOrder({ paymentIntentId: "pi_email_skip" }));
+		vi.mocked(sendOrderNotificationEmail).mockResolvedValue({ skipped: true });
+
+		const res = await POST(buildRequest(buildEvent({ paymentIntentId: "pi_email_skip" })));
+
+		expect(res.status).toBe(200);
+		expect(consoleErrorSpy).toHaveBeenCalledWith(
+			"EMAIL INTERNO DE NUEVO PEDIDO NO ENTREGADO",
+			expect.objectContaining({ result: { skipped: true } }),
+		);
+		consoleErrorSpy.mockRestore();
+	});
+
+	it("si sendOrderConfirmationEmail devuelve {failed}, lo registra pero no rompe la respuesta", async () => {
+		const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		vi.mocked(Commerce.orderGet).mockResolvedValue(buildOrder({ paymentIntentId: "pi_email_failed" }));
+		vi.mocked(sendOrderConfirmationEmail).mockResolvedValue({ failed: true });
+
+		const res = await POST(buildRequest(buildEvent({ paymentIntentId: "pi_email_failed" })));
+
+		expect(res.status).toBe(200);
+		expect(consoleErrorSpy).toHaveBeenCalledWith(
+			"EMAIL DE CONFIRMACIÓN AL CLIENTE NO ENTREGADO",
+			expect.objectContaining({ result: { failed: true } }),
+		);
+		consoleErrorSpy.mockRestore();
+	});
+
 	it("nunca deja el stock en negativo aunque la cantidad comprada supere el stock leído", async () => {
 		vi.mocked(Commerce.getProductsFromMetadata).mockResolvedValue([
 			{ product: buildProduct({ id: "prod_over", stock: 1 }), quantity: 3 },
@@ -210,6 +264,30 @@ describe("POST /api/stripe-webhook — payment_intent.succeeded", () => {
 		const notificationOrder = vi.mocked(sendOrderNotificationEmail).mock.invocationCallOrder[0]!;
 		const confirmationOrder = vi.mocked(sendOrderConfirmationEmail).mock.invocationCallOrder[0]!;
 		expect(notificationOrder).toBeLessThan(confirmationOrder);
+	});
+
+	it("sin OWNER_NOTIFICATION_EMAIL configurada, el email interno usa config.contact.email", async () => {
+		vi.mocked(Commerce.orderGet).mockResolvedValue(buildOrder({ paymentIntentId: "pi_default_email" }));
+
+		await POST(buildRequest(buildEvent({ paymentIntentId: "pi_default_email" })));
+
+		expect(sendOrderNotificationEmail).toHaveBeenCalledWith("shop.lasernex@gmail.com", expect.anything());
+	});
+
+	it("con OWNER_NOTIFICATION_EMAIL configurada, la sobreescribe sin tocar código", async () => {
+		const { env } = await import("@/env.mjs");
+		// @ts-expect-error -- mock de solo lectura en el módulo real, aquí es plano
+		env.OWNER_NOTIFICATION_EMAIL = "otra-cuenta@example.com";
+		try {
+			vi.mocked(Commerce.orderGet).mockResolvedValue(buildOrder({ paymentIntentId: "pi_override_email" }));
+
+			await POST(buildRequest(buildEvent({ paymentIntentId: "pi_override_email" })));
+
+			expect(sendOrderNotificationEmail).toHaveBeenCalledWith("otra-cuenta@example.com", expect.anything());
+		} finally {
+			// @ts-expect-error -- restaurar para no filtrar estado a otros tests
+			env.OWNER_NOTIFICATION_EMAIL = undefined;
+		}
 	});
 
 	it.each([

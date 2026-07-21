@@ -102,7 +102,7 @@ export async function POST(request: Request) {
 	}
 
 	switch (event.type) {
-		case "payment_intent.succeeded":
+		case "payment_intent.succeeded": {
 			const metadata = cartMetadataSchema.parse(event.data.object.metadata);
 			if (metadata.taxCalculationId) {
 				// Solo se ejecuta si ENABLE_STRIPE_TAX está activo (hoy no lo está: precios
@@ -114,49 +114,62 @@ export async function POST(request: Request) {
 				});
 			}
 
-			// Idempotencia: Stripe puede reenviar el mismo evento (SECURITY.md §2 exige
-			// tolerar duplicados) — si el stock de este pago ya se descontó, no repetirlo.
-			// Se comprueba contra el PaymentIntent EN VIVO, no contra
-			// event.data.object.metadata (un snapshot congelado en el instante en que
-			// Stripe generó este evento): un reenvío del MISMO evento seguiría viendo
-			// ese snapshot como "sin procesar" aunque ya hubiéramos marcado el
-			// PaymentIntent real como procesado, y se repetiría el descuento de stock.
-			const livePaymentIntent = await stripe.paymentIntents.retrieve(event.data.object.id);
-			if (livePaymentIntent.metadata.stock_processed) {
-				console.warn("Stock ya descontado para este pago, se omite el decremento", {
-					paymentIntentId: event.data.object.id,
-				});
-			} else {
-				const products = await Commerce.getProductsFromMetadata(metadata);
+			// Bloque propio con try/catch: si algo aquí falla (Stripe caído, cambio de
+			// forma en la API), NO seguimos como si nada — devolvemos 500 para que
+			// Stripe reintente este mismo evento más tarde. Es seguro reintentar
+			// porque la idempotencia de abajo mira el estado EN VIVO del pago, no un
+			// contador propio: un reintento nunca duplica el descuento de stock.
+			try {
+				// Idempotencia: Stripe puede reenviar el mismo evento (SECURITY.md §2 exige
+				// tolerar duplicados) — si el stock de este pago ya se descontó, no repetirlo.
+				// Se comprueba contra el PaymentIntent EN VIVO, no contra
+				// event.data.object.metadata (un snapshot congelado en el instante en que
+				// Stripe generó este evento): un reenvío del MISMO evento seguiría viendo
+				// ese snapshot como "sin procesar" aunque ya hubiéramos marcado el
+				// PaymentIntent real como procesado, y se repetiría el descuento de stock.
+				const livePaymentIntent = await stripe.paymentIntents.retrieve(event.data.object.id);
+				if (livePaymentIntent.metadata.stock_processed) {
+					console.warn("Stock ya descontado para este pago, se omite el decremento", {
+						paymentIntentId: event.data.object.id,
+					});
+				} else {
+					const products = await Commerce.getProductsFromMetadata(metadata);
 
-				for (const { product, quantity } of products) {
-					if (product && product.metadata.stock !== Infinity) {
-						await stripe.products.update(product.id, {
-							metadata: {
-								// Nunca negativo: dos ventas casi simultáneas de la misma pieza
-								// podrían restar dos veces sobre el mismo valor leído (Stripe no
-								// ofrece un decremento atómico en metadata) — este suelo evita
-								// que el stock quede en negativo aunque no elimina la carrera en
-								// sí. Ver ARCHITECTURE.md sobre por qué no hay un lock distribuido
-								// aquí (exigiría infraestructura nueva, fuera de presupuesto).
-								stock: Math.max(0, product.metadata.stock - quantity),
-							},
-						});
+					for (const { product, quantity } of products) {
+						if (product && product.metadata.stock !== Infinity) {
+							await stripe.products.update(product.id, {
+								metadata: {
+									// Nunca negativo: dos ventas casi simultáneas de la misma pieza
+									// podrían restar dos veces sobre el mismo valor leído (Stripe no
+									// ofrece un decremento atómico en metadata) — este suelo evita
+									// que el stock quede en negativo aunque no elimina la carrera en
+									// sí. Ver ARCHITECTURE.md sobre por qué no hay un lock distribuido
+									// aquí (exigiría infraestructura nueva, fuera de presupuesto).
+									stock: Math.max(0, product.metadata.stock - quantity),
+								},
+							});
 
-						revalidateTag(`product-${product.id}`, "max");
+							revalidateTag(`product-${product.id}`, "max");
+						}
 					}
+
+					// Revalida también el tag amplio: la ficha (productGetBySlug) y la
+					// categoría (productBrowse) cachean por slug/categoría bajo "product",
+					// no por el id interno de Stripe — sin esto seguían mostrando el stock
+					// de antes de la venta hasta que la dueña editara cualquier producto.
+					revalidateTag("product", "max");
+
+					// Stripe hace merge de metadata: esta clave se añade sin borrar las del carrito.
+					await stripe.paymentIntents.update(event.data.object.id, {
+						metadata: { stock_processed: "1" },
+					});
 				}
-
-				// Revalida también el tag amplio: la ficha (productGetBySlug) y la
-				// categoría (productBrowse) cachean por slug/categoría bajo "product",
-				// no por el id interno de Stripe — sin esto seguían mostrando el stock
-				// de antes de la venta hasta que la dueña editara cualquier producto.
-				revalidateTag("product", "max");
-
-				// Stripe hace merge de metadata: esta clave se añade sin borrar las del carrito.
-				await stripe.paymentIntents.update(event.data.object.id, {
-					metadata: { stock_processed: "1" },
+			} catch (stockError) {
+				console.error("Error descontando stock tras el pago — Stripe reintentará este evento", {
+					paymentIntentId: event.data.object.id,
+					stockError,
 				});
+				return new Response("Error interno procesando el pago", { status: 500 });
 			}
 
 			revalidateTag(`cart-${event.data.object.id}`, "max");
@@ -244,18 +257,36 @@ export async function POST(request: Request) {
 
 				// Email interno PRIMERO: que Carla se entere del pedido aunque falle el
 				// email al cliente. El enlace lleva SHIP_NOTIFICATION_SECRET en claro:
-				// va SOLO a config.contact.email (Carla), nunca al cliente ni a ninguna
-				// superficie pública.
+				// va SOLO a la dueña, nunca al cliente ni a ninguna superficie pública.
+				// OWNER_NOTIFICATION_EMAIL permite cambiar el destinatario desde las
+				// variables de entorno de Vercel sin tocar código; si no está
+				// configurada, usa el valor fijo de store.config.ts (comportamiento
+				// de siempre, sin cambios).
 				try {
 					if (env.SHIP_NOTIFICATION_SECRET) {
-						await sendOrderNotificationEmail(config.contact.email, {
-							orderNumber: orderData.orderNumber,
-							customerName: orderData.customerName,
-							lines: orderData.lines,
-							totalFormatted: orderData.totalFormatted,
-							shippingAddress: orderData.shippingAddress,
-							shipToken: env.SHIP_NOTIFICATION_SECRET,
-						});
+						const notificationResult = await sendOrderNotificationEmail(
+							env.OWNER_NOTIFICATION_EMAIL ?? config.contact.email,
+							{
+								orderNumber: orderData.orderNumber,
+								customerName: orderData.customerName,
+								lines: orderData.lines,
+								totalFormatted: orderData.totalFormatted,
+								shippingAddress: orderData.shippingAddress,
+								shipToken: env.SHIP_NOTIFICATION_SECRET,
+							},
+						);
+						// sendOrderNotificationEmail NUNCA lanza si Resend falla: devuelve
+						// {skipped} o {failed}. Sin este chequeo, un fallo aquí (clave de
+						// Resend caducada, cuota agotada) desaparecía en silencio total —
+						// el pago se completa igual y nadie se entera de que Carla nunca
+						// vio el pedido. Log explícito y greppable para quien revise logs.
+						if ("skipped" in notificationResult || "failed" in notificationResult) {
+							console.error("EMAIL INTERNO DE NUEVO PEDIDO NO ENTREGADO", {
+								paymentIntentId: event.data.object.id,
+								orderNumber: orderData.orderNumber,
+								result: notificationResult,
+							});
+						}
 					} else {
 						console.warn("SHIP_NOTIFICATION_SECRET no configurado: email interno de nuevo pedido NO enviado");
 					}
@@ -265,7 +296,7 @@ export async function POST(request: Request) {
 
 				try {
 					const hasPersonalization = orderData.lines.some((line) => Boolean(line.personalization));
-					await sendOrderConfirmationEmail(orderData.email, {
+					const confirmationResult = await sendOrderConfirmationEmail(orderData.email, {
 						orderNumber: orderData.orderNumber,
 						customerName: orderData.customerName,
 						lines: orderData.lines,
@@ -273,12 +304,20 @@ export async function POST(request: Request) {
 						shippingAddress: orderData.shippingAddress,
 						hasPersonalization,
 					});
+					if ("skipped" in confirmationResult || "failed" in confirmationResult) {
+						console.error("EMAIL DE CONFIRMACIÓN AL CLIENTE NO ENTREGADO", {
+							paymentIntentId: event.data.object.id,
+							orderNumber: orderData.orderNumber,
+							result: confirmationResult,
+						});
+					}
 				} catch (confirmationError) {
 					console.error("Error enviando email de confirmación al cliente", confirmationError);
 				}
 			}
 
 			break;
+		}
 
 		// La dueña reembolsa un pedido desde el Dashboard de Stripe (su única forma
 		// de gestionar devoluciones, ADR-003): sin esto el stock descontado en la
