@@ -25,6 +25,12 @@ export const env = createEnv({
 		// Token compartido para el enlace de "refrescar tienda" (OPERATIONS.md) — mismo
 		// patrón que SHIP_NOTIFICATION_SECRET, sin cuenta de usuario.
 		STORE_REFRESH_SECRET: z.string().optional(),
+		// Override opcional del email de aviso interno de "Nuevo pedido" (por
+		// defecto, config.contact.email en store.config.ts). Sin esta variable
+		// configurada, cambiar ese email exigía que un desarrollador editara el
+		// código fuente y redesplegara — con ella, se cambia desde las variables
+		// de entorno de Vercel sin tocar código (ver OPERATIONS.md).
+		OWNER_NOTIFICATION_EMAIL: z.string().email().optional(),
 	},
 	client: {
 		// Can be provided via env or parameters to Commerce Kit, thus optional
@@ -53,6 +59,7 @@ export const env = createEnv({
 		RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
 		SHIP_NOTIFICATION_SECRET: process.env.SHIP_NOTIFICATION_SECRET,
 		STORE_REFRESH_SECRET: process.env.STORE_REFRESH_SECRET,
+		OWNER_NOTIFICATION_EMAIL: process.env.OWNER_NOTIFICATION_EMAIL,
 
 		NEXT_PUBLIC_LANGUAGE: process.env.NEXT_PUBLIC_LANGUAGE,
 	},
