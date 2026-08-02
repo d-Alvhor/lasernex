@@ -16,6 +16,9 @@ export const generateMetadata = async (): Promise<Metadata> => {
 	const t = await getTranslations("/order.metadata");
 	return {
 		title: t("title"),
+		// Página con datos personales de un pedido concreto: fuera del índice.
+		// No se delega solo en robots.txt, que es una sugerencia, no un control.
+		robots: { index: false, follow: false },
 	};
 };
 
@@ -37,6 +40,16 @@ export default async function OrderDetailsPage(props: {
 
 	if (!order) {
 		return <div>{t("notFound")}</div>;
+	}
+
+	// El client_secret tiene que ser EL del PaymentIntent, no una cadena
+	// cualquiera. Antes solo se comprobaba que fuese un string, y como el
+	// "número de pedido" que va en el email es el id del PaymentIntent sin su
+	// prefijo, cualquiera con ese número podía reconstruir la URL y leer
+	// nombre, dirección, teléfono y email del comprador. Es dato personal:
+	// sin coincidencia exacta, esta página no existe.
+	if (order.order.client_secret !== searchParams.payment_intent_client_secret) {
+		return <div>{t("invalidDetails")}</div>;
 	}
 	const cookie = await getCartCookieJson();
 	const locale = await getLocale();
