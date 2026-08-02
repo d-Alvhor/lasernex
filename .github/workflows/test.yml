@@ -16,28 +16,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: package.json
-          cache: "pnpm"
+      # El repo usa bun (bun.lock + packageManager en package.json). Antes esto
+      # instalaba con pnpm y fallaba en el primer paso: los tests NUNCA llegaron
+      # a ejecutarse en CI. Un CI siempre rojo es peor que no tener CI, porque
+      # nadie vuelve a mirarlo.
+      - name: Instalar Bun
+        uses: oven-sh/setup-bun@v2
 
       - uses: actions/cache@v4
         with:
           path: |
             ${{ github.workspace }}/.next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.json') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('bun.lock') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.json') }}-
+            ${{ runner.os }}-nextjs-${{ hashFiles('bun.lock') }}-
 
-      - name: Install dependencies
-        run: pnpm --version && pnpm install --frozen-lockfile
+      - name: Instalar dependencias
+        run: bun install --frozen-lockfile
 
-      - name: Check Biome
-        run: pnpm biome check
+      # commerce-kit está congelado en 0.0.39 y parcheado con `bun patch`. Si el
+      # parche no se aplicara, productGetBySlug volvería a usar products.search,
+      # cuyo índice va con retraso: un producto recién creado daría "no existe".
+      # El CI probaría entonces un código distinto del que se despliega.
+      - name: Comprobar que el parche de commerce-kit está aplicado
+        run: |
+          if grep -q "products\.search" node_modules/commerce-kit/dist/index.js; then
+            echo "::error::El parche de commerce-kit NO está aplicado: productGetBySlug seguiría usando products.search."
+            exit 1
+          fi
+          echo "Parche de commerce-kit aplicado correctamente."
 
-      - name: Test
-        run: pnpm test
+      - name: Typecheck
+        run: bun run tsc --noEmit
+
+      - name: Biome
+        run: bun run biome check
+
+      - name: Tests
+        run: bun run test -- --run
