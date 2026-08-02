@@ -14,7 +14,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # El repo usa bun (bun.lock + packageManager en package.json). Antes esto
       # instalaba con pnpm y fallaba en el primer paso: los tests NUNCA llegaron
