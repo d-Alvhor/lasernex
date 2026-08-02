@@ -2,7 +2,7 @@
 
 import { clearCartCookie, getCartCookieJson, setCartCookieJson } from "@/lib/cart";
 import { rateLimit } from "@/lib/rate-limit";
-import { stringToInt } from "@/lib/utils";
+import { calculateCartTotalPossiblyWithTax, stringToInt } from "@/lib/utils";
 import * as Commerce from "commerce-kit";
 import { updateTag } from "next/cache";
 import { headers } from "next/headers";
@@ -128,6 +128,7 @@ export async function increaseQuantity(productId: string) {
 		cartId: cart.cart.id,
 		operation: "INCREASE",
 	});
+	await syncPaymentIntentAmount(cart.cart.id);
 }
 
 export async function decreaseQuantity(productId: string) {
@@ -140,6 +141,7 @@ export async function decreaseQuantity(productId: string) {
 		cartId: cart.cart.id,
 		operation: "DECREASE",
 	});
+	await syncPaymentIntentAmount(cart.cart.id);
 	if (stringToInt(cart.cart.metadata[productId]) - 1 <= 0) {
 		await clearPersonalizationMetadata(cart, productId);
 	}
@@ -183,9 +185,38 @@ export async function setQuantity({
 	if (!updatedCart) {
 		throw new Error("No se pudo actualizar la cantidad. Inténtalo de nuevo.");
 	}
+	await syncPaymentIntentAmount(cart.cart.id);
 	if (quantity <= 0) {
 		await clearPersonalizationMetadata(cart, productId);
 	}
+}
+
+// commerce-kit@0.0.39 calcula el importe de TODA mutación de cantidad como
+// "total anterior + una unidad" (mismo cálculo en cartSetQuantity y en
+// cartChangeQuantity dentro de su bundle): solo acierta al subir de uno en uno.
+// Al bajar, al quitar o al saltar varias unidades, el PaymentIntent queda
+// descuadrado con lo que el cliente ve — y es el importe del PaymentIntent lo
+// que se cobra de verdad, así que se cobraba de más.
+//
+// Tras cada mutación releemos el carrito autoritativo de Stripe y fijamos el
+// importe con la MISMA función que pinta el total en pantalla
+// (calculateCartTotalPossiblyWithTax, la que usa cart-summary-table). Así lo
+// cobrado y lo mostrado no pueden divergir: es el mismo cálculo, no dos.
+async function syncPaymentIntentAmount(cartId: string) {
+	const fresh = await Commerce.cartGet(cartId);
+	if (!fresh) {
+		return;
+	}
+
+	const amount = calculateCartTotalPossiblyWithTax(fresh);
+	// Stripe rechaza importes por debajo de su mínimo. Con el carrito vacío no
+	// hay nada que cobrar y el checkout no deja continuar, así que se deja como
+	// está en vez de provocar un error de la API.
+	if (amount <= 0) {
+		return;
+	}
+
+	await Commerce.updatePaymentIntent({ paymentIntentId: cartId, data: { amount } });
 }
 
 // Al eliminar del carrito un producto personalizado, limpia su texto: Stripe

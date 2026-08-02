@@ -9,6 +9,7 @@ vi.mock("commerce-kit", () => ({
 	cartGet: vi.fn(),
 	cartAdd: vi.fn(),
 	cartSetQuantity: vi.fn(),
+	cartChangeQuantity: vi.fn(),
 	productGetById: vi.fn(),
 	updatePaymentIntent: vi.fn(),
 	cartCount: vi.fn(() => 1),
@@ -27,7 +28,7 @@ vi.mock("@/lib/rate-limit", () => ({
 	rateLimit: vi.fn(() => true),
 }));
 
-const { addToCartAction, setQuantity } = await import("./cart-actions");
+const { addToCartAction, setQuantity, decreaseQuantity } = await import("./cart-actions");
 
 function buildFormData(fields: Record<string, string>) {
 	const formData = new FormData();
@@ -211,5 +212,98 @@ describe("setQuantity — límite de stock y carrito autoritativo", () => {
 			paymentIntentId: "pi_current",
 			data: { metadata: { personalization_prod_1: "" } },
 		});
+	});
+});
+
+// commerce-kit@0.0.39 calcula el importe de toda mutación como "total anterior
+// + una unidad", así que al bajar/quitar cobraba de más y al saltar varias
+// unidades de menos. Estos tests fijan el invariante: lo que se cobra es
+// SIEMPRE el total real del carrito ya mutado.
+describe("cantidad — el importe cobrado se resincroniza con el total mostrado", () => {
+	// 3 unidades a 40,00 € = 120,00 €
+	const carritoDe = (quantity: number, shippingRate: unknown = null) => ({
+		cart: { id: "pi_current", amount: 12000, metadata: { prod_1: String(quantity) } },
+		lines: [{ product: { default_price: { unit_amount: 4000 } }, quantity }],
+		shippingRate,
+	});
+
+	beforeEach(() => {
+		mockCookieJar({ id: "pi_current", linesCount: 1 });
+		vi.mocked(Commerce.productGetById).mockResolvedValue({ metadata: { stock: 99 } } as never);
+		vi.mocked(Commerce.cartSetQuantity).mockResolvedValue({ id: "pi_current" } as never);
+		vi.mocked(Commerce.cartChangeQuantity).mockResolvedValue({ id: "pi_current" } as never);
+	});
+
+	afterEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("al BAJAR de 3 a 2 cobra 80,00 €, no el total anterior más una unidad", async () => {
+		vi.mocked(Commerce.cartGet)
+			.mockResolvedValueOnce(carritoDe(3) as never) // lectura previa a la mutación
+			.mockResolvedValueOnce(carritoDe(2) as never); // relectura autoritativa posterior
+
+		await setQuantity({ productId: "prod_1", quantity: 2 });
+
+		expect(Commerce.updatePaymentIntent).toHaveBeenCalledWith({
+			paymentIntentId: "pi_current",
+			data: { amount: 8000 },
+		});
+	});
+
+	it("al SALTAR de 1 a 5 cobra las 5 unidades, no 2", async () => {
+		vi.mocked(Commerce.cartGet)
+			.mockResolvedValueOnce(carritoDe(1) as never)
+			.mockResolvedValueOnce(carritoDe(5) as never);
+
+		await setQuantity({ productId: "prod_1", quantity: 5 });
+
+		expect(Commerce.updatePaymentIntent).toHaveBeenCalledWith({
+			paymentIntentId: "pi_current",
+			data: { amount: 20000 },
+		});
+	});
+
+	it("suma el envío al importe, igual que hace el total en pantalla", async () => {
+		const envio = { fixed_amount: { amount: 490 } };
+		vi.mocked(Commerce.cartGet)
+			.mockResolvedValueOnce(carritoDe(3, envio) as never)
+			.mockResolvedValueOnce(carritoDe(2, envio) as never);
+
+		await setQuantity({ productId: "prod_1", quantity: 2 });
+
+		expect(Commerce.updatePaymentIntent).toHaveBeenCalledWith({
+			paymentIntentId: "pi_current",
+			data: { amount: 8490 },
+		});
+	});
+
+	it("el botón de restar (decreaseQuantity) también resincroniza el importe", async () => {
+		vi.mocked(Commerce.cartGet)
+			.mockResolvedValueOnce(carritoDe(3) as never)
+			.mockResolvedValueOnce(carritoDe(2) as never);
+
+		await decreaseQuantity("prod_1");
+
+		expect(Commerce.updatePaymentIntent).toHaveBeenCalledWith({
+			paymentIntentId: "pi_current",
+			data: { amount: 8000 },
+		});
+	});
+
+	it("con el carrito ya vacío no intenta poner el importe a cero (Stripe lo rechazaría)", async () => {
+		vi.mocked(Commerce.cartGet)
+			.mockResolvedValueOnce(carritoDe(1) as never)
+			.mockResolvedValueOnce({
+				cart: { id: "pi_current", amount: 4000, metadata: {} },
+				lines: [],
+				shippingRate: null,
+			} as never);
+
+		await setQuantity({ productId: "prod_1", quantity: 0 });
+
+		expect(Commerce.updatePaymentIntent).not.toHaveBeenCalledWith(
+			expect.objectContaining({ data: expect.objectContaining({ amount: expect.anything() }) }),
+		);
 	});
 });
