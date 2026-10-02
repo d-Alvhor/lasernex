@@ -49,7 +49,7 @@ const nextConfig: NextConfig = {
 			{ hostname: "d1wqzb5bdbcre6.cloudfront.net" },
 			{ hostname: "*.blob.vercel-storage.com" },
 		],
-		formats: ["image/avif", "image/webp"],
+		formats: ["image/webp"],
 	},
 	transpilePackages: ["commerce-kit"],
 	reactCompiler: true, // graduó de experimental en Next 16
